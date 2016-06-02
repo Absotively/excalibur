@@ -105,3 +105,50 @@ func TestAddPairing(t *testing.T) {
 		}
 	}
 }
+
+// goodness for ideal round with 6 players paired
+var idealRoundGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 6}}
+
+// these are ideal except in one aspect, still with 6 players paired
+var rematchGoodness = roundGoodness{[]int{2, 1}, []int{3}, []int{6}, []int{0, 6}}
+var groupDiffGoodness = roundGoodness{[]int{3}, []int{2, 1}, []int{6}, []int{0, 6}}
+var sideDiffsGoodness = roundGoodness{[]int{3}, []int{3}, []int{0, 4, 2}, []int{0, 6}}
+var streaksGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 4, 2}}
+var awfulSideDiffsGoodness = roundGoodness{[]int{3}, []int{3}, []int{2, 0, 0, 4}, []int{0, 6}}
+var awfulStreaksGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 2, 0, 4}}
+
+// side diffs of one cannot and should not be avoided, so this is just as good as the ideal round
+var nearlyIdealRoundGoodness = roundGoodness{[]int{3}, []int{3}, []int{0, 6}, []int{0, 6}}
+
+var goodnessesInOrder = []*roundGoodness{
+	&idealRoundGoodness,
+	&streaksGoodness,
+	&sideDiffsGoodness,
+	&groupDiffGoodness,
+	&awfulStreaksGoodness,
+	&awfulSideDiffsGoodness,
+	&rematchGoodness,
+}
+
+func TestGoodnessComparison(t *testing.T) {
+	for i, g1 := range goodnessesInOrder {
+		for j, g2 := range goodnessesInOrder {
+			e := (j > i)
+			r := g1.BetterThan(g2)
+			if r != e {
+				t.Error("For", g1,
+					"better than", g2,
+					"expected", e,
+					"got", r,
+				)
+			}
+		}
+	}
+
+	if idealRoundGoodness.BetterThan(&nearlyIdealRoundGoodness) {
+		t.Error("Ideal round compared better than nearly ideal round; expected side diffs of one to be ignored")
+	}
+	if nearlyIdealRoundGoodness.BetterThan(&idealRoundGoodness) {
+		t.Error("Nearly ideal round compared better than ideal round; expected side diffs of one to be ignored")
+	}
+}
