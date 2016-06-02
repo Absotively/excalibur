@@ -48,6 +48,15 @@ var addPairingTests = []struct {
 	},
 }
 
+func copyGoodness(g *roundGoodness) roundGoodness {
+	var c roundGoodness
+	c.rematches = append([]int(nil), g.rematches...)
+	c.sideDiffs = append([]int(nil), g.sideDiffs...)
+	c.streaks = append([]int(nil), g.streaks...)
+	c.groupDiffs = append([]int(nil), g.groupDiffs...)
+	return c
+}
+
 func (g1 *roundGoodness) equals(g2 *roundGoodness) bool {
 	if len(g1.rematches) != len(g2.rematches) ||
 		len(g1.sideDiffs) != len(g2.sideDiffs) ||
@@ -85,7 +94,7 @@ func (g1 *roundGoodness) equals(g2 *roundGoodness) bool {
 
 func TestAddPairing(t *testing.T) {
 	for _, data := range addPairingTests {
-		g := data.in
+		g := copyGoodness(&data.in)
 		g.addPairing(data.p)
 		if !g.equals(&data.out) {
 			t.Error("For", data.in,
