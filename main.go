@@ -165,11 +165,12 @@ func shufflePlayers(g Players) {
 }
 
 type Game struct {
-	Corp      *Player
-	Runner    *Player
-	Concluded bool
-	CorpWin   bool
-	RunnerWin bool
+	Corp        *Player
+	Runner      *Player
+	Concluded   bool
+	CorpWin     bool
+	RunnerWin   bool
+	ModifiedWin bool
 }
 
 type Round struct {
@@ -479,11 +480,27 @@ func (r *Round) Finish() {
 	r.Tournament.updateSoS()
 }
 
+func (g Game) RecordResult(winner *Player, modifiedWin bool) {
+	g.Concluded = true
+	if winner == g.Corp {
+		g.CorpWin = true
+		g.RunnerWin = false
+	} else if winner == g.Runner {
+		g.RunnerWin = true
+		g.CorpWin = false
+	}
+	g.ModifiedWin = modifiedWin
+}
+
 func (g Game) CorpPrestige() int {
 	if !g.Concluded {
 		return 0
 	} else if g.CorpWin {
-		return 2
+		if g.ModifiedWin {
+			return 2
+		} else {
+			return 3
+		}
 	} else if g.RunnerWin {
 		return 0
 	} else {
@@ -495,7 +512,11 @@ func (g Game) RunnerPrestige() int {
 	if !g.Concluded {
 		return 0
 	} else if g.RunnerWin {
-		return 2
+		if g.ModifiedWin {
+			return 2
+		} else {
+			return 3
+		}
 	} else if g.CorpWin {
 		return 0
 	} else {
