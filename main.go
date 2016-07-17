@@ -94,7 +94,6 @@ func (t *Tournament) updateSoS() {
 func (t *Tournament) SortPlayers() {
 	t.updateSoS()
 	sort.Sort(t.Players)
-	// TODO: Handle h2h, randomize ties
 
 	// Record the score groups
 	group := 1
@@ -138,30 +137,8 @@ func (t *Tournament) GetPlayersForPairing() Players {
 func (t *Tournament) GetPlayersForPairing() Players {
 }
 
+// sortScoreGroup actually just randomizes ties; SoS and xSoS are handled when the whole list is sorted
 func sortScoreGroup(g Players) {
-	// first look for a head-to-head winner
-	for i, p1 := range g {
-		foundWinner := true
-		for j, p2 := range g {
-			if h2hWinner(p1, p2) != p1 {
-				foundWinner = false
-				break
-			}
-		}
-
-		if foundWinner {
-			// move winner to top of score group
-			copy(g[0:i-1], g[1:i])
-			g[0] = p1
-
-			// ignore h2h winner for further sorting
-			g = g[1:]
-
-			break
-		}
-	}
-
-	// randomize ties
 	tieStart := 0
 	SoS := -1.0
 	xSoS := -1.0
@@ -185,15 +162,6 @@ func shufflePlayers(g Players) {
 		j := rand.Intn(i + 1)
 		g[i], g[j] = g[j], g[i]
 	}
-}
-
-func h2hWinner(p1, p2 Player) *Player {
-	for _, m := range p1.FinishedMatches {
-		if m.GetOpponent(p1) == p2 {
-			return m.GetWinner()
-		}
-	}
-	return nil
 }
 
 type Game struct {
