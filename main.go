@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"sort"
 )
 
@@ -48,7 +49,7 @@ func (s Players) Less(i, j int) bool {
 	}
 }
 
-func (t *Tournament) SortPlayers() {
+func (t *Tournament) updateSoS() {
 	if !t.sosUpToDate {
 		// Update prestige averages
 		for _, p := range t.Players {
@@ -88,20 +89,111 @@ func (t *Tournament) SortPlayers() {
 		}
 		t.sosUpToDate = true
 	}
+}
 
+func (t *Tournament) SortPlayers() {
+	t.updateSoS()
 	sort.Sort(t.Players)
 	// TODO: Handle h2h, randomize ties
 
 	// Record the score groups
 	group := 1
 	score := -1
-	for _, p := range t.Players {
+	groupStart := 0
+	for i, p := range t.Players {
 		if p.Prestige != score {
 			score = p.Prestige
 			t.ScoreGroups[score] = group
 			group += 1
+			if i != 0 {
+				sortScoreGroup(Players[groupStart : i-1])
+			}
+			groupStart = i
 		}
 	}
+	// sort last score group
+	sortScoreGroup(Players[groupStart:])
+}
+
+// returns a copy of t.Players, sorted by prestige only
+func (t *Tournament) GetPlayersForPairing() Players {
+	t.SortPlayers()
+	p := copy(Players(nil), t.Players...)
+
+	groupStart := 0
+	for i, p := range t.Players {
+		if p.Prestige != score {
+			score = p.Prestige
+			if i != 0 && i-groupStart > 1 {
+				shufflePlayers(p[groupStart : i-1])
+			}
+			groupStart = i
+		}
+	}
+	// sort last score group
+	shufflePlayers(Players[groupStart:])
+}
+
+// returns a copy of t.Players, sorted by prestige but randomized in each score group
+func (t *Tournament) GetPlayersForPairing() Players {
+}
+
+func sortScoreGroup(g Players) {
+	// first look for a head-to-head winner
+	for i, p1 := range g {
+		foundWinner := true
+		for j, p2 := range g {
+			if h2hWinner(p1, p2) != p1 {
+				foundWinner = false
+				break
+			}
+		}
+
+		if foundWinner {
+			// move winner to top of score group
+			copy(g[0:i-1], g[1:i])
+			g[0] = p1
+
+			// ignore h2h winner for further sorting
+			g = g[1:]
+
+			break
+		}
+	}
+
+	// randomize ties
+	tieStart := 0
+	SoS := -1.0
+	xSoS := -1.0
+	for i, p := range t.Players {
+		if p.SoS != SoS || p.XSoS != xSoS {
+			SoS = p.SoS
+			xSoS = p.xSoS
+			if i != 0 && i-tieStart > 1 {
+				shufflePlayers(g[tieStart : i-1])
+			}
+			tieStart = i
+		}
+	}
+	// shuffle last tie group
+	shufflePlayers(Players[tieStart:])
+}
+
+// basically copied from http://marcelom.github.io/2013/06/07/goshuffle.html
+func shufflePlayers(g Players) {
+	for i := range g {
+		j := rand.Intn(i + 1)
+		g[i], g[j] = g[j], g[i]
+	}
+}
+
+func h2hWinner(p1, p2 Player) *Player {
+	for _, m := range p1.FinishedMatches {
+		if m.GetOpponent(p1) == p2 {
+			return m.GetWinner()
+		}
+	}
+	return nil
 }
 
 type Game struct {
@@ -416,31 +508,7 @@ func (r *Round) Finish() {
 		m.Runner.CurrentMatch = nil
 	}
 
-	// Update SoS
-	for _, p := range r.Tournament.Players {
-		var SoSSum int
-		var matchCount int
-		for _, m := range p.FinishedMatches {
-			if !m.IsBye() {
-				SoSSum += m.GetOpponent(p).Prestige
-				matchCount += 1
-			}
-		}
-		p.SoS = float64(SoSSum) / float64(matchCount)
-	}
-
-	// Update xSoS
-	for _, p := range r.Tournament.Players {
-		var xSoSSum float64
-		var matchCount int
-		for _, m := range p.FinishedMatches {
-			if !m.IsBye() {
-				xSoSSum += m.GetOpponent(p).XSoS
-				matchCount += 1
-			}
-		}
-		p.XSoS = xSoSSum / float64(matchCount)
-	}
+	r.Tournament.updateSoS()
 }
 
 func (g Game) CorpPrestige() int {
@@ -495,6 +563,16 @@ func (m Match) GetOpponent(p *Player) *Player {
 	if p == m.Corp {
 		return m.Runner
 	} else if p == m.Runner {
+		return m.Corp
+	} else {
+		return nil
+	}
+}
+
+func (m Match) GetWinner() *Player {
+	if m.G.RunnerWin {
+		return m.Runner
+	} else if m.G.CorpWin {
 		return m.Corp
 	} else {
 		return nil
