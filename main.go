@@ -105,24 +105,25 @@ func (t *Tournament) SortPlayers() {
 			t.ScoreGroups[score] = group
 			group += 1
 			if i != 0 {
-				sortScoreGroup(Players[groupStart : i-1])
+				sortScoreGroup(t.Players[groupStart : i-1])
 			}
 			groupStart = i
 		}
 	}
 	// sort last score group
-	sortScoreGroup(Players[groupStart:])
+	sortScoreGroup(t.Players[groupStart:])
 }
 
-// returns a copy of t.Players, sorted by prestige only
+// returns a copy of t.Players, sorted by prestige only, with each score group randomized
 func (t *Tournament) GetPlayersForPairing() Players {
 	t.SortPlayers()
-	p := copy(Players(nil), t.Players...)
+	p := append(Players(nil), t.Players...)
 
 	groupStart := 0
-	for i, p := range t.Players {
-		if p.Prestige != score {
-			score = p.Prestige
+	score := -1
+	for i, pi := range t.Players {
+		if pi.Prestige != score {
+			score = pi.Prestige
 			if i != 0 && i-groupStart > 1 {
 				shufflePlayers(p[groupStart : i-1])
 			}
@@ -130,11 +131,9 @@ func (t *Tournament) GetPlayersForPairing() Players {
 		}
 	}
 	// sort last score group
-	shufflePlayers(Players[groupStart:])
-}
+	shufflePlayers(p[groupStart:])
 
-// returns a copy of t.Players, sorted by prestige but randomized in each score group
-func (t *Tournament) GetPlayersForPairing() Players {
+	return p
 }
 
 // sortScoreGroup actually just randomizes ties; SoS and xSoS are handled when the whole list is sorted
@@ -142,10 +141,10 @@ func sortScoreGroup(g Players) {
 	tieStart := 0
 	SoS := -1.0
 	xSoS := -1.0
-	for i, p := range t.Players {
+	for i, p := range g {
 		if p.SoS != SoS || p.XSoS != xSoS {
 			SoS = p.SoS
-			xSoS = p.xSoS
+			xSoS = p.XSoS
 			if i != 0 && i-tieStart > 1 {
 				shufflePlayers(g[tieStart : i-1])
 			}
@@ -153,7 +152,7 @@ func sortScoreGroup(g Players) {
 		}
 	}
 	// shuffle last tie group
-	shufflePlayers(Players[tieStart:])
+	shufflePlayers(g[tieStart:])
 }
 
 // basically copied from http://marcelom.github.io/2013/06/07/goshuffle.html
@@ -480,7 +479,7 @@ func (r *Round) Finish() {
 	r.Tournament.updateSoS()
 }
 
-func (g Game) RecordResult(winner *Player, modifiedWin bool) {
+func (g *Game) RecordResult(winner *Player, modifiedWin bool) {
 	g.Concluded = true
 	if winner == g.Corp {
 		g.CorpWin = true

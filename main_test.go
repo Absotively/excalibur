@@ -2,6 +2,55 @@ package main
 
 import "testing"
 
+// Game tests
+
+var c = Player{Name: "Alice", Corp: "EtF", Runner: "Noise"}
+var r = Player{Name: "Bob", Corp: "PE", Runner: "Mac"}
+var gameTests = []struct {
+	corp           *Player
+	runner         *Player
+	winner         *Player
+	timed          bool
+	corpPrestige   int
+	runnerPrestige int
+}{
+	{&c, &r, &c, false, 3, 0},
+	{&c, &r, &c, true, 2, 0},
+	{&c, &r, nil, false, 1, 1},
+	{&c, &r, &r, true, 0, 2},
+	{&c, &r, &r, false, 0, 3},
+}
+
+func TestGames(t *testing.T) {
+	for _, data := range gameTests {
+		g := &Game{Corp: data.corp, Runner: data.runner}
+		g.RecordResult(data.winner, data.timed)
+		cp := g.CorpPrestige()
+		rp := g.RunnerPrestige()
+		if cp != data.corpPrestige || rp != data.runnerPrestige {
+			result := ""
+			if data.timed {
+				result = "timed "
+			}
+			if data.winner == data.corp {
+				result = result + "corp win"
+			} else if data.winner == data.runner {
+				result = result + "runner win"
+			} else {
+				result = result + "tie"
+			}
+			t.Error("For", result,
+				"expected corp prestige", data.corpPrestige,
+				"and runner prestige", data.runnerPrestige,
+				"got corp prestige", cp,
+				"and runner prestige", rp,
+			)
+		}
+	}
+}
+
+// Round goodness tests
+
 var emptyGoodness = roundGoodness{}
 
 var idealPairing = pairingDetails{rematch: 0, groupDiff: 0, sideDiffs: [2]int{0, 0}, streaks: [2]int{1, 1}}
