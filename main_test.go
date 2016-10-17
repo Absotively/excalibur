@@ -23,7 +23,7 @@ var gameTests = []struct {
 
 func TestGames(t *testing.T) {
 	for _, data := range gameTests {
-		g := &Game{Corp: data.corp, Runner: data.runner}
+		g := &Game{Pairing: Pairing{Corp: data.corp, Runner: data.runner}}
 		g.RecordResult(data.winner, data.timed)
 		cp := g.CorpPrestige()
 		rp := g.RunnerPrestige()
