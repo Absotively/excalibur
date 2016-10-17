@@ -20,7 +20,7 @@ func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) {
 }
 
 func (t *Tournament) AddRound() {
-	t.Rounds = append(t.Rounds, Round{})
+	t.Rounds = append(t.Rounds, Round{Tournament: t, Number: len(t.Rounds) + 1})
 }
 
 type Player struct {
