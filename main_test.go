@@ -49,6 +49,15 @@ func TestGames(t *testing.T) {
 	}
 }
 
+func TestUnfinishedGames(t *testing.T) {
+	g := &Game{Pairing: Pairing{Corp: &c, Runner: &r}}
+	cp := g.CorpPrestige()
+	rp := g.RunnerPrestige()
+	if cp != 0 || rp != 0 {
+		t.Error("For unfinished game, expected corp prestige 0 and runner prestige 0, got corp prestige", cp, "and runner prestige", rp)
+	}
+}
+
 // Round goodness tests
 
 var emptyGoodness = roundGoodness{}
@@ -160,10 +169,16 @@ var idealRoundGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 6}
 
 // these are ideal except in one aspect, still with 6 players paired
 var rematchGoodness = roundGoodness{[]int{2, 1}, []int{3}, []int{6}, []int{0, 6}}
+var multiRematchGoodness = roundGoodness{[]int{1, 2}, []int{3}, []int{6}, []int{0, 6}}
 var groupDiffGoodness = roundGoodness{[]int{3}, []int{2, 1}, []int{6}, []int{0, 6}}
-var sideDiffsGoodness = roundGoodness{[]int{3}, []int{3}, []int{0, 4, 2}, []int{0, 6}}
-var streaksGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 4, 2}}
+var worseGroupDiffGoodness = roundGoodness{[]int{3}, []int{1, 2}, []int{6}, []int{0, 6}}
+var mildSideDiffsGoodness = roundGoodness{[]int{3}, []int{3}, []int{0, 2, 4}, []int{0, 6}}
+var milderSideDiffsGoodness = roundGoodness{[]int{3}, []int{3}, []int{0, 4, 2}, []int{0, 6}}
+var mildStreaksGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 2, 4}}
+var milderStreaksGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 4, 2}}
+var badSideDiffsGoodness = roundGoodness{[]int{3}, []int{3}, []int{4, 0, 0, 2}, []int{0, 6}}
 var awfulSideDiffsGoodness = roundGoodness{[]int{3}, []int{3}, []int{2, 0, 0, 4}, []int{0, 6}}
+var badStreaksGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 4, 0, 2}}
 var awfulStreaksGoodness = roundGoodness{[]int{3}, []int{3}, []int{6}, []int{0, 2, 0, 4}}
 
 // side diffs of one cannot and should not be avoided, so this is just as good as the ideal round
@@ -171,12 +186,18 @@ var nearlyIdealRoundGoodness = roundGoodness{[]int{3}, []int{3}, []int{0, 6}, []
 
 var goodnessesInOrder = []*roundGoodness{
 	&idealRoundGoodness,
-	&streaksGoodness,
-	&sideDiffsGoodness,
+	&milderStreaksGoodness,
+	&mildStreaksGoodness,
+	&milderSideDiffsGoodness,
+	&mildSideDiffsGoodness,
 	&groupDiffGoodness,
+	&worseGroupDiffGoodness,
+	&badStreaksGoodness,
 	&awfulStreaksGoodness,
+	&badSideDiffsGoodness,
 	&awfulSideDiffsGoodness,
 	&rematchGoodness,
+	&multiRematchGoodness,
 }
 
 func TestGoodnessComparison(t *testing.T) {
