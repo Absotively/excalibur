@@ -13,43 +13,82 @@ var gameTests = []struct {
 	timed          bool
 	corpPrestige   int
 	runnerPrestige int
+	desc           string
 }{
-	{&c, &r, &c, false, 3, 0},
-	{&c, &r, &c, true, 2, 0},
-	{&c, &r, nil, false, 1, 1},
-	{&c, &r, &r, true, 0, 2},
-	{&c, &r, &r, false, 0, 3},
+	{&c, &r, &c, false, 3, 0, "Corp win"},
+	{&c, &r, &c, true, 2, 0, "Corp timed win"},
+	{&c, &r, nil, false, 1, 1, "Tie"},
+	{&c, &r, &r, true, 0, 2, "Runner timed win"},
+	{&c, &r, &r, false, 0, 3, "Runner win"},
 }
 
-func TestGames(t *testing.T) {
+func TestMatches(t *testing.T) {
 	for _, data := range gameTests {
-		g := &Game{Pairing: Pairing{Corp: data.corp, Runner: data.runner}}
-		g.RecordResult(data.winner, data.timed)
-		cp := g.CorpPrestige()
-		rp := g.RunnerPrestige()
+		m := Match{Game{Pairing: Pairing{Corp: data.corp, Runner: data.runner}}}
+		m.Game.RecordResult(data.winner, data.timed)
+		if !m.IsDone() {
+			t.Error("Match with result recorded returned false for IsDone()")
+		}
+		cp := m.Game.CorpPrestige()
+		rp := m.Game.RunnerPrestige()
 		if cp != data.corpPrestige || rp != data.runnerPrestige {
-			result := ""
-			if data.timed {
-				result = "timed "
-			}
-			if data.winner == data.corp {
-				result = result + "corp win"
-			} else if data.winner == data.runner {
-				result = result + "runner win"
-			} else {
-				result = result + "tie"
-			}
-			t.Error("For", result,
+			t.Error("For", data.desc,
 				"expected corp prestige", data.corpPrestige,
 				"and runner prestige", data.runnerPrestige,
 				"got corp prestige", cp,
 				"and runner prestige", rp,
 			)
 		}
+		mcp := m.GetPrestige(data.corp)
+		if mcp != cp {
+			t.Error("For", data.desc,
+				"game prestige", cp,
+				"and match prestige", mcp,
+				"for corp player did not match",
+			)
+		}
+		mrp := m.GetPrestige(data.runner)
+		if mrp != rp {
+			t.Error("For", data.desc,
+				"game prestige", rp,
+				"and match prestige", mrp,
+				"for runner player did not match",
+			)
+		}
+		invalidp := m.GetPrestige(&Player{})
+		invalidop := m.GetOpponent(&Player{})
+		if invalidp != 0 {
+			t.Error("For", data.desc,
+				"got prestige", invalidp,
+				"and opponent", invalidop,
+				"for non-participating player; expected 0 and nil",
+			)
+		}
+		winner := m.GetWinner()
+		if winner != data.winner {
+			t.Error("For", data.desc,
+				"got winner", winner,
+				"expected", data.winner,
+			)
+		}
+		corpop := m.GetOpponent(data.corp)
+		if corpop != data.runner {
+			t.Error("For", data.desc,
+				"got corp's opponent", corpop,
+				"expected", data.runner,
+			)
+		}
+		runnerop := m.GetOpponent(data.runner)
+		if runnerop != data.corp {
+			t.Error("For", data.desc,
+				"got runner's opponent", runnerop,
+				"expected", data.corp,
+			)
+		}
 	}
 }
 
-func TestUnfinishedGames(t *testing.T) {
+func TestUnfinishedGame(t *testing.T) {
 	g := &Game{Pairing: Pairing{Corp: &c, Runner: &r}}
 	cp := g.CorpPrestige()
 	rp := g.RunnerPrestige()
