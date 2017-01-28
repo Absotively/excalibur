@@ -335,7 +335,7 @@ func (g *roundGoodness) addPairing(p pairingDetails) {
 }
 
 // will need to cache these at some point, probably
-func (t *Tournament) PairingEffects(corp, runner *Player) pairingDetails {
+func (t *Tournament) pairingEffects(corp, runner *Player) pairingDetails {
 	var d pairingDetails
 
 	for _, m := range corp.FinishedMatches {
@@ -436,7 +436,7 @@ func (p *partialRound) appendMatch(corp, runner *Player) partialRound {
 	newPartial.Tournament = p.Tournament
 
 	newPartial.goodness = p.goodness
-	newPartial.goodness.addPairing(newPartial.Tournament.PairingEffects(corp, runner))
+	newPartial.goodness.addPairing(newPartial.Tournament.pairingEffects(corp, runner))
 
 	if len(p.UnmatchedPlayers) > 2 {
 		newPartial.UnmatchedPlayers = make([]*Player, len(p.UnmatchedPlayers)-2)
