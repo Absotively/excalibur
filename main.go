@@ -12,6 +12,11 @@ func playerList(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, tournament)
 }
 
+func standings(w http.ResponseWriter, r *http.Request) {
+	t, _ := template.New("players").Parse(standingsTemplate)
+	t.Execute(w, tournament)
+}
+
 func addPlayer(w http.ResponseWriter, r *http.Request) {
 	data := map[string]string{"saveurl": r.URL.Path}
 	if r.FormValue("process") != "" {
@@ -40,5 +45,6 @@ func addPlayer(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/players", playerList)
 	http.HandleFunc("/players/add", addPlayer)
+	http.HandleFunc("/standings", standings)
 	http.ListenAndServe(":8080", nil)
 }

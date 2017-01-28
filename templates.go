@@ -4,9 +4,18 @@ const playerListTemplate = `<h1>Players</h1>
 {{if .Players}}<ul>
 {{range .Players}}<li>{{.Name}} ({{.Corp}}, {{.Runner}})</li>
 {{end}}
-</ul>
+</table>
 {{end}}
 <p><a href="/players/add">Add</a></p>
+`
+
+const standingsTemplate = `<h1>Standings</h1>
+{{if .Players}}<table id="standings">
+<tr><th>Player</th><th>Pts</th><th>SoS</th><th>XSoS</th></tr>
+{{range .Players}}<tr><td>{{.Name}}</td><td>{{.Prestige}}</td><td>{{.SoS}}</td><td>{{.XSoS}}</td></tr>
+{{end}}
+</table>
+{{end}}
 `
 
 const addPlayerTemplate = `<h1>Add player</h1>
