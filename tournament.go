@@ -23,7 +23,7 @@ func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) error {
 			return errors.New("Duplicate player name")
 		}
 	}
-	t.Players = append(t.Players, &Player{Name: Name, Corp: Corp, Runner: Runner})
+	t.Players = append(t.Players, &Player{Name: Name, Corp: Corp, Runner: Runner, Tournament: t})
 	return nil
 }
 
@@ -42,6 +42,7 @@ func (t *Tournament) AddRound() {
 }
 
 type Player struct {
+	Tournament      *Tournament
 	Name            string
 	Corp            string
 	Runner          string
@@ -109,7 +110,7 @@ func (t *Tournament) updateSoS() {
 	}
 }
 
-func (t *Tournament) SortPlayers() {
+func (t *Tournament) sortPlayers() {
 	t.updateSoS()
 	sort.Sort(t.Players)
 
@@ -475,7 +476,7 @@ func (r *Round) MakeMatches() {
 			bestPairings = append(bestPairings, Pairing{Corp: players[2*i], Runner: players[2*i+1]})
 		}
 	} else {
-		r.Tournament.SortPlayers()
+		r.Tournament.sortPlayers()
 		partials := make(chan partialRound)
 		stops := make(chan int)
 		result := make(chan []Pairing)
@@ -554,6 +555,8 @@ func (g *Game) RecordResult(winner *Player, modifiedWin bool) {
 		g.CorpWin = false
 	}
 	g.ModifiedWin = modifiedWin
+
+	g.Corp.Tournament.sortPlayers()
 }
 
 func (g Game) CorpPrestige() int {

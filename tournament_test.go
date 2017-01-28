@@ -3,9 +3,9 @@ package main
 import "testing"
 
 // Game tests
-
-var c = Player{Name: "Alice", Corp: "EtF", Runner: "Noise"}
-var r = Player{Name: "Bob", Corp: "PE", Runner: "Mac"}
+var t Tournament
+var c = Player{Name: "Alice", Corp: "EtF", Runner: "Noise", Tournament: &t}
+var r = Player{Name: "Bob", Corp: "PE", Runner: "Mac", Tournament: &t}
 var gameTests = []struct {
 	corp           *Player
 	runner         *Player
