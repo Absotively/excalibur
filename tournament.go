@@ -1,7 +1,7 @@
 package main
 
 import (
-	"error"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -17,10 +17,10 @@ type Tournament struct {
 	ScoreGroups    map[int]int
 }
 
-func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) Error {
-	for i, pi := range t.Players {
+func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) error {
+	for _, pi := range t.Players {
 		if pi.Name == Name {
-			return error.New("Duplicate player name")
+			return errors.New("Duplicate player name")
 		}
 	}
 	t.Players = append(t.Players, &Player{Name: Name, Corp: Corp, Runner: Runner})
@@ -649,7 +649,7 @@ func loadTournament(title string) (*Tournament, error) {
 	return &Tournament{Name: title}, nil
 }
 
-func main() {
+func saveAndLoad() {
 	t1 := &Tournament{Name: "regional"}
 	t1.save()
 	t2, _ := loadTournament("regional")
