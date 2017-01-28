@@ -14,7 +14,7 @@ type Tournament struct {
 	DroppedPlayers Players
 	Rounds         []Round
 	sosUpToDate    bool
-	ScoreGroups    map[int]int
+	scoreGroups    map[int]int
 }
 
 func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) error {
@@ -121,7 +121,7 @@ func (t *Tournament) sortPlayers() {
 	for i, p := range t.Players {
 		if p.Prestige != score {
 			score = p.Prestige
-			t.ScoreGroups[score] = group
+			t.scoreGroups[score] = group
 			group += 1
 			if i != 0 {
 				sortScoreGroup(t.Players[groupStart : i-1])
@@ -337,18 +337,18 @@ func (t *Tournament) PairingEffects(corp, runner *Player) pairingDetails {
 
 	if runner == nil {
 		var lowestScore int
-		for s := range t.ScoreGroups {
+		for s := range t.scoreGroups {
 			if s < lowestScore {
 				lowestScore = s
 			}
 		}
 
-		d.groupDiff = t.ScoreGroups[corp.Prestige] - t.ScoreGroups[lowestScore]
+		d.groupDiff = t.scoreGroups[corp.Prestige] - t.scoreGroups[lowestScore]
 		d.groupDiff += 1 // treat bye as being in its own score group below the last score group
 
 		d.sideDiffs[0], d.streaks[0] = playerByeEffects(corp)
 	} else {
-		d.groupDiff = t.ScoreGroups[corp.Prestige] - t.ScoreGroups[runner.Prestige]
+		d.groupDiff = t.scoreGroups[corp.Prestige] - t.scoreGroups[runner.Prestige]
 		if d.groupDiff < 0 {
 			d.groupDiff = -d.groupDiff
 		}
