@@ -37,8 +37,17 @@ func (t *Tournament) DropPlayer(p *Player) {
 	}
 }
 
-func (t *Tournament) AddRound() {
+func (t *Tournament) NextRound() error {
+	if len(t.Rounds) != 0 {
+		for _, m := range t.Rounds[len(t.Rounds)-1].Matches {
+			if !m.Game.Concluded {
+				return errors.New("Previous round not completed")
+			}
+		}
+	}
 	t.Rounds = append(t.Rounds, Round{Tournament: t, Number: len(t.Rounds) + 1})
+	t.Rounds[len(t.Rounds)-1].MakeMatches()
+	return nil
 }
 
 type Player struct {
