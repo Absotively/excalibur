@@ -1,6 +1,7 @@
 package main
 
 import (
+	"error"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -10,13 +11,30 @@ import (
 type Tournament struct {
 	Name string
 	Players
-	Rounds      []Round
-	sosUpToDate bool
-	ScoreGroups map[int]int
+	DroppedPlayers Players
+	Rounds         []Round
+	sosUpToDate    bool
+	ScoreGroups    map[int]int
 }
 
-func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) {
+func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) Error {
+	for i, pi := range t.Players {
+		if pi.Name == Name {
+			return error.New("Duplicate player name")
+		}
+	}
 	t.Players = append(t.Players, &Player{Name: Name, Corp: Corp, Runner: Runner})
+	return nil
+}
+
+func (t *Tournament) DropPlayer(p *Player) {
+	for i, pi := range t.Players {
+		if p == pi {
+			t.DroppedPlayers = append(t.DroppedPlayers, pi)
+			t.Players = append(t.DroppedPlayers[:i], t.DroppedPlayers[i+1:]...)
+			break
+		}
+	}
 }
 
 func (t *Tournament) AddRound() {
