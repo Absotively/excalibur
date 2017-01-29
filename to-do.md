@@ -1,6 +1,7 @@
 * Finish adding ability to drop players
 * Add ability to re-add dropped players
 * Add ability to edit players
+* Add ability to edit match results
 * Working save/load
 * Autosave
 * Restore previous state (undo)
@@ -9,3 +10,7 @@
 * Sort matches?
 * Previous rounds display
 * Fix SoS and XSoS
+* Randomize player order within each score group before matching
+* Add ability to edit matches
+* Add ability to restrict matching (eg. manually assign byes before starting the round and then let the matching algorithm match everyone else)) 
+* Fix bye display
