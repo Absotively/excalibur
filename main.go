@@ -62,7 +62,7 @@ func startRound(w http.ResponseWriter, r *http.Request) {
 }
 
 func finishRound(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "POST" {
+	if r.Method == "POST" && len(tournament.Rounds) > 0 {
 		e := tournament.Rounds[len(tournament.Rounds)-1].Finish()
 		if e != nil {
 			t, _ := template.New("error").Parse(errorTemplate)

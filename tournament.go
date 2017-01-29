@@ -48,6 +48,7 @@ func (t *Tournament) NextRound() error {
 	}
 	t.Rounds = append(t.Rounds, Round{Tournament: t, Number: len(t.Rounds) + 1})
 	t.Rounds[len(t.Rounds)-1].MakeMatches()
+	t.Rounds[len(t.Rounds)-1].Start()
 	return nil
 }
 
@@ -394,6 +395,9 @@ func playerCorpEffects(p *Player) (sideDiff, streak int) {
 			streak = 1
 		}
 	}
+	if sideDiff < 0 {
+		sideDiff = -sideDiff
+	}
 	return
 }
 
@@ -409,6 +413,9 @@ func playerRunnerEffects(p *Player) (sideDiff, streak int) {
 			sideDiff -= 1
 			streak += 1
 		}
+	}
+	if sideDiff < 0 {
+		sideDiff = -sideDiff
 	}
 	return
 }
@@ -437,6 +444,9 @@ func playerByeEffects(p *Player) (sideDiff, streak int) {
 			}
 		}
 	}
+	if sideDiff < 0 {
+		sideDiff = -sideDiff
+	}
 	return
 }
 
@@ -451,7 +461,7 @@ func (p *partialRound) appendMatch(corp, runner *Player) partialRound {
 	newPartial.goodness.addPairing(newPartial.Tournament.pairingEffects(corp, runner))
 
 	if len(p.UnmatchedPlayers) > 2 {
-		newPartial.UnmatchedPlayers = make([]*Player, len(p.UnmatchedPlayers)-2)
+		newPartial.UnmatchedPlayers = make([]*Player, 0, len(p.UnmatchedPlayers)-2)
 
 		for _, unmatchedPlayer := range p.UnmatchedPlayers {
 			if unmatchedPlayer != corp && unmatchedPlayer != runner {
@@ -516,6 +526,7 @@ func (r *Round) MakeMatches() {
 							go p.NextMatches(partials, stops)
 							activeRoundCreators += 1
 						}
+					} else {
 					}
 				case <-stops:
 					activeRoundCreators -= 1
@@ -529,9 +540,9 @@ func (r *Round) MakeMatches() {
 		}(partials, stops)
 
 		var basePartialMatch partialRound
-		copy(basePartialMatch.UnmatchedPlayers, r.Tournament.Players)
+		basePartialMatch.UnmatchedPlayers = append(basePartialMatch.UnmatchedPlayers, r.Tournament.Players...)
+
 		basePartialMatch.Tournament = r.Tournament
-		shufflePlayers(basePartialMatch.UnmatchedPlayers)
 		partials <- basePartialMatch
 		stops <- 1
 
@@ -545,6 +556,7 @@ func (r *Round) MakeMatches() {
 
 func (r *Round) Start() {
 	if !r.started {
+		r.started = true
 		for _, m := range r.Matches {
 			m.Corp.CurrentMatch = &m
 			m.Runner.CurrentMatch = &m
@@ -554,20 +566,22 @@ func (r *Round) Start() {
 
 func (r *Round) Finish() error {
 	if r.started && !r.finished {
+		r.finished = true
 		for _, m := range r.Matches {
 			if !m.Concluded {
 				return errors.New("Some matches not recorded")
 			}
 		}
-		for _, m := range r.Matches {
+		for i, _ := range r.Matches {
+			m := &(r.Matches[i])
 			m.Corp.Prestige += m.GetPrestige(m.Corp)
-			m.Runner.Prestige += m.GetPrestige(m.Runner)
-
-			m.Corp.FinishedMatches = append(m.Corp.FinishedMatches, &m)
-			m.Runner.FinishedMatches = append(m.Runner.FinishedMatches, &m)
-
+			m.Corp.FinishedMatches = append(m.Corp.FinishedMatches, m)
 			m.Corp.CurrentMatch = nil
-			m.Runner.CurrentMatch = nil
+			if m.Runner != nil {
+				m.Runner.Prestige += m.GetPrestige(m.Runner)
+				m.Runner.FinishedMatches = append(m.Runner.FinishedMatches, m)
+				m.Runner.CurrentMatch = nil
+			}
 		}
 
 		r.Tournament.updateSoS()
