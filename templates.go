@@ -45,9 +45,40 @@ const matchesTemplate = `{{$roundNum := .Number}}<h1>Round {{$roundNum}}</h1>
 {{range .Matches}}
 <tr>
 <th>{{.Number}}</th>
-<td{{if .Game.CorpWin}} class="winner"{{end}}>{{.Game.Pairing.Corp.Name}}</td>
-<td{{if .Game.RunnerWin}} class="winner"{{end}}>{{.Game.Pairing.Runner.Name}}</td>
-<td>{{if .Game.Concluded}}{{if or .Game.CorpWin .Game.RunnerWin}}{{if .Game.CorpWin}}Corp win{{else}}Runner win{{end}}{{if.Game.ModifiedWin}} (time){{end}}{{else}}Tie{{end}}{{else}}<a href="/recordResult?round={{$roundNum}}&match={{.Number}}">record</a>{{end}}</td>
+<td class="corp
+ {{- if .Game.CorpWin}} winner{{end -}}
+">{{.Game.Pairing.Corp.Name}}</td>
+<td class="runner
+ {{- if .Game.RunnerWin}} winner{{end -}}
+ {{- if not .Game.Pairing.Runner}} bye{{end -}}
+">
+ {{- if .Game.Pairing.Runner -}}
+  {{.Game.Pairing.Runner.Name}}
+ {{- else -}}
+  BYE
+ {{- end -}}
+</td>
+<td class="result
+ {{- if not .Game.Pairing.Runner}} bye{{end -}}
+">
+ {{- if not .Game.Pairing.Runner -}}
+  BYE
+ {{- else if .Game.Concluded}}
+  {{- if or .Game.CorpWin .Game.RunnerWin}}
+   {{- if .Game.CorpWin -}}
+    Corp win
+   {{- else -}}
+    Runner win
+   {{- end}}
+   {{- if.Game.ModifiedWin}} (time)
+   {{- end}}
+  {{- else -}}
+   Tie
+  {{- end}}
+ {{- else -}}
+  <a href="/recordResult?round={{$roundNum}}&match={{.Number}}">record</a>
+ {{- end -}}
+</td>
 </tr>
 {{end}}
 </table>

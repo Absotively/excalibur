@@ -554,6 +554,10 @@ func (r *Round) MakeMatches() {
 	r.Matches = make([]Match, 0, len(r.Tournament.Players)/2)
 	for i, pairing := range bestPairings {
 		r.Matches = append(r.Matches, Match{Game: Game{Pairing: pairing}, Number: i + 1})
+		if pairing.Runner == nil {
+			// bye
+			r.Matches[len(r.Matches)-1].Game.RecordResult(pairing.Corp, false)
+		}
 	}
 }
 
@@ -562,7 +566,9 @@ func (r *Round) Start() {
 		r.started = true
 		for _, m := range r.Matches {
 			m.Corp.CurrentMatch = &m
-			m.Runner.CurrentMatch = &m
+			if m.Runner != nil {
+				m.Runner.CurrentMatch = &m
+			}
 		}
 	}
 }
@@ -659,7 +665,7 @@ func (m Match) GetPrestige(p *Player) int {
 		return 0
 	} else if m.Runner == nil || m.Corp == nil {
 		//Bye
-		return 2
+		return 3
 	} else if m.Corp == p {
 		return m.Game.CorpPrestige()
 	} else {

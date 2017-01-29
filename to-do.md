@@ -13,4 +13,4 @@
 * Randomize player order within each score group before matching
 * Add ability to edit matches
 * Add ability to restrict matching (eg. manually assign byes before starting the round and then let the matching algorithm match everyone else)) 
-* Fix bye display
+* Make giving the bye to someone with a low score a higher priority than avoiding regular cross-score-group matches
