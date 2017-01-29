@@ -39,11 +39,12 @@ func (t *Tournament) DropPlayer(p *Player) {
 
 func (t *Tournament) NextRound() error {
 	if len(t.Rounds) != 0 {
-		for _, m := range t.Rounds[len(t.Rounds)-1].Matches {
-			if !m.Game.Concluded {
-				return errors.New("Previous round not completed")
-			}
+		e := t.Rounds[len(t.Rounds)-1].Finish()
+		if e != nil {
+			return e
 		}
+	} else {
+		t.sortPlayers()
 	}
 	t.Rounds = append(t.Rounds, Round{Tournament: t, Number: len(t.Rounds) + 1})
 	t.Rounds[len(t.Rounds)-1].MakeMatches()
@@ -51,7 +52,7 @@ func (t *Tournament) NextRound() error {
 }
 
 type Player struct {
-	Tournament      *Tournament
+	Tournament      *Tournament `json:"-"`
 	Name            string
 	Corp            string
 	Runner          string
@@ -59,7 +60,7 @@ type Player struct {
 	PrestigeAvg     float64
 	SoS             float64
 	XSoS            float64
-	CurrentMatch    *Match
+	CurrentMatch    *Match `json:"-"`
 	FinishedMatches []*Match
 }
 
@@ -124,6 +125,7 @@ func (t *Tournament) sortPlayers() {
 	sort.Sort(t.Players)
 
 	// Record the score groups
+	t.scoreGroups = make(map[int]int)
 	group := 1
 	score := -1
 	groupStart := 0
@@ -178,7 +180,7 @@ type Game struct {
 }
 
 type Round struct {
-	Tournament *Tournament
+	Tournament *Tournament `json:"-"`
 	Number     int
 	Matches    []Match
 }
@@ -480,12 +482,11 @@ func (r *Round) MakeMatches() {
 			players = append(players, nil)
 		}
 
-		bestPairings = make([]Pairing, len(players)/2)
+		bestPairings = make([]Pairing, 0, len(players)/2)
 		for i := 0; i < len(players)/2; i++ {
 			bestPairings = append(bestPairings, Pairing{Corp: players[2*i], Runner: players[2*i+1]})
 		}
 	} else {
-		r.Tournament.sortPlayers()
 		partials := make(chan partialRound)
 		stops := make(chan int)
 		result := make(chan []Pairing)
@@ -526,10 +527,15 @@ func (r *Round) MakeMatches() {
 
 		bestPairings = <-result
 	}
-	r.Matches = make([]Match, len(r.Tournament.Players)/2)
+	fmt.Print("\n\nBest pairings: ")
+	fmt.Print(bestPairings)
+	r.Matches = make([]Match, 0, len(r.Tournament.Players)/2)
 	for _, pairing := range bestPairings {
 		r.Matches = append(r.Matches, Match{Game: Game{Pairing: pairing}})
 	}
+	fmt.Print("\n\nMatches: ")
+	fmt.Print(r.Matches)
+	fmt.Print("\n\n")
 }
 
 func (r *Round) Start() {
@@ -539,7 +545,12 @@ func (r *Round) Start() {
 	}
 }
 
-func (r *Round) Finish() {
+func (r *Round) Finish() error {
+	for _, m := range r.Matches {
+		if !m.Concluded {
+			return errors.New("Some matches not recorded")
+		}
+	}
 	for _, m := range r.Matches {
 		m.Corp.Prestige += m.GetPrestige(m.Corp)
 		m.Runner.Prestige += m.GetPrestige(m.Runner)
@@ -552,6 +563,9 @@ func (r *Round) Finish() {
 	}
 
 	r.Tournament.updateSoS()
+	r.Tournament.sortPlayers()
+
+	return nil
 }
 
 func (g *Game) RecordResult(winner *Player, modifiedWin bool) {
@@ -564,8 +578,6 @@ func (g *Game) RecordResult(winner *Player, modifiedWin bool) {
 		g.CorpWin = false
 	}
 	g.ModifiedWin = modifiedWin
-
-	g.Corp.Tournament.sortPlayers()
 }
 
 func (g Game) CorpPrestige() int {
