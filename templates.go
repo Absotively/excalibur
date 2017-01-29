@@ -31,28 +31,41 @@ const standingsTemplate = `<h1>Standings</h1>
 const addPlayerTemplate = `<h1>Add player</h1>
 {{if .error}}<p><strong>Error: {{.error}}</p></strong>{{end}}
 <form action="{{.saveurl}}" method="POST">
-<label>Name: <input type="text" name="name" autofocus{{if .name}} value="{{.name}}"{{end}}></label>
-<label>Corp: <input type="text" name="corp"{{if .corp}} value="{{.corp}}"{{end}}></label>
-<label>Runner: <input type="text" name="runner"{{if .runner}} value="{{.runner}}"{{end}}></label>
+<label>Name: <input type="text" name="name" autofocus{{if .name}} value="{{.name}}"{{end}}></label><br>
+<label>Corp: <input type="text" name="corp"{{if .corp}} value="{{.corp}}"{{end}}></label><br>
+<label>Runner: <input type="text" name="runner"{{if .runner}} value="{{.runner}}"{{end}}></label><br>
 <input type="submit" value="Add">
 </form>
 `
 
-const matchesTemplate = `<h1>Round {{.Number}}</h1>
-<table><tr><th>Corp</th><th>Runner</th><th>Result</th></tr>
+const matchesTemplate = `{{$roundNum := .Number}}<h1>Round {{$roundNum}}</h1>
+<table><tr><th>#</th><th>Corp</th><th>Runner</th><th>Result</th></tr>
 {{range .Matches}}
 <tr>
+<th>{{.Number}}</th>
 <td{{if .Game.CorpWin}} class="winner"{{end}}>{{.Game.Pairing.Corp.Name}}</td>
 <td{{if .Game.RunnerWin}} class="winner"{{end}}>{{.Game.Pairing.Runner.Name}}</td>
-<td>{{if .Game.Concluded}}{{if .Game.CorpWin or .Game.RunnerWin}}{{if .Game.CorpWin}}Corp win{{else}}Runner win{{end}}{{if.Game.ModifiedWin}} (time){{end}}{{end}}Tie{{end}}</td>
+<td>{{if .Game.Concluded}}{{if or .Game.CorpWin .Game.RunnerWin}}{{if .Game.CorpWin}}Corp win{{else}}Runner win{{end}}{{if.Game.ModifiedWin}} (time){{end}}{{else}}Tie{{end}}{{else}}<a href="/recordResult?round={{$roundNum}}&match={{.Number}}">record</a>{{end}}</td>
 </tr>
 {{end}}
 </table>
 `
 
-const noMatchesTemplate = `
-<h1>Matches</h1>
+const noMatchesTemplate = `<h1>Matches</h1>
 <p>No matches</p>
+`
+
+const recordMatchTemplate = `<h1>Record match result</h1>
+<form action="{{.recordurl}}" method="POST">
+<input type="hidden" name="round" value="{{.roundNum}}">
+<input type="hidden" name="match" value="{{.matchNum}}">
+<p>Winner:</p>
+<label><input type="radio" name="winner" value="corp"> {{.corp}} (Corp)</label><br>
+<label><input type="radio" name="winner" value="tie"> Tie</label><br>
+<label><input type="radio" name="winner" value="runner"> {{.runner}} (Runner)</label></p>
+<p><label><input type="checkbox" name="timed"> Timed/modified win</label></p>
+<p><input type="submit" value="Record"></p>
+</form>
 `
 
 const errorTemplate = `{{if .}}<p><strong>Error: {{.}}</strong></p>{{end}}`

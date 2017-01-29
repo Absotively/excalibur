@@ -527,15 +527,10 @@ func (r *Round) MakeMatches() {
 
 		bestPairings = <-result
 	}
-	fmt.Print("\n\nBest pairings: ")
-	fmt.Print(bestPairings)
 	r.Matches = make([]Match, 0, len(r.Tournament.Players)/2)
-	for _, pairing := range bestPairings {
-		r.Matches = append(r.Matches, Match{Game: Game{Pairing: pairing}})
+	for i, pairing := range bestPairings {
+		r.Matches = append(r.Matches, Match{Game: Game{Pairing: pairing}, Number: i + 1})
 	}
-	fmt.Print("\n\nMatches: ")
-	fmt.Print(r.Matches)
-	fmt.Print("\n\n")
 }
 
 func (r *Round) Start() {
@@ -619,6 +614,7 @@ type Pairing struct {
 
 type Match struct {
 	Game
+	Number int
 }
 
 func (m Match) IsBye() bool {
