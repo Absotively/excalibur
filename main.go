@@ -61,6 +61,18 @@ func startRound(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func finishRound(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "POST" {
+		e := tournament.Rounds[len(tournament.Rounds)-1].Finish()
+		if e != nil {
+			t, _ := template.New("error").Parse(errorTemplate)
+			t.Execute(w, e)
+			return
+		}
+	}
+	seeOther(w, "/")
+}
+
 func matches(w http.ResponseWriter, r *http.Request) {
 	if len(tournament.Rounds) == 0 || len(tournament.Rounds[len(tournament.Rounds)-1].Matches) == 0 {
 		t, _ := template.New("matches").Parse(noMatchesTemplate)
@@ -122,6 +134,7 @@ func main() {
 	http.HandleFunc("/standings", standings)
 	http.HandleFunc("/matches", matches)
 	http.HandleFunc("/recordResult", recordResult)
+	http.HandleFunc("/finishRound", finishRound)
 	http.HandleFunc("/nextRound", startRound)
 	http.ListenAndServe(":8080", nil)
 }

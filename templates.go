@@ -5,6 +5,7 @@ const menuTemplate = `<h1>Tournament menu</h1>
 <li><a href="/players">Players</a></li>
 <li><a href="/standings">Standings</a></li>
 <li><a href="/matches">Current Round Matches</a></li>
+<li><form action="/finishRound" method="POST"><input type="submit" value="Finish round"></li>
 <li><form action="/nextRound" method="POST"><input type="submit" value="Start next round"></li>
 </ul>
 `

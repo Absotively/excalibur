@@ -70,11 +70,11 @@ func (s Players) Len() int      { return len(s) }
 func (s Players) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
 func (s Players) Less(i, j int) bool {
 	if s[i].Prestige != s[j].Prestige {
-		return s[i].Prestige < s[j].Prestige
+		return s[i].Prestige > s[j].Prestige
 	} else if s[i].SoS != s[j].SoS {
-		return s[i].SoS < s[j].SoS
+		return s[i].SoS > s[j].SoS
 	} else {
-		return s[i].XSoS < s[j].XSoS
+		return s[i].XSoS > s[j].XSoS
 	}
 }
 
@@ -101,7 +101,11 @@ func (t *Tournament) updateSoS() {
 					matchCount += 1
 				}
 			}
-			p.SoS = float64(SoSSum) / float64(matchCount)
+			if matchCount == 0 {
+				p.SoS = 0
+			} else {
+				p.SoS = float64(SoSSum) / float64(matchCount)
+			}
 		}
 
 		// Update xSoS
@@ -114,7 +118,11 @@ func (t *Tournament) updateSoS() {
 					matchCount += 1
 				}
 			}
-			p.XSoS = xSoSSum / float64(matchCount)
+			if matchCount == 0 {
+				p.XSoS = 0
+			} else {
+				p.XSoS = xSoSSum / float64(matchCount)
+			}
 		}
 		t.sosUpToDate = true
 	}
@@ -183,6 +191,8 @@ type Round struct {
 	Tournament *Tournament `json:"-"`
 	Number     int
 	Matches    []Match
+	started    bool
+	finished   bool
 }
 
 type partialRound struct {
@@ -534,31 +544,35 @@ func (r *Round) MakeMatches() {
 }
 
 func (r *Round) Start() {
-	for _, m := range r.Matches {
-		m.Corp.CurrentMatch = &m
-		m.Runner.CurrentMatch = &m
+	if !r.started {
+		for _, m := range r.Matches {
+			m.Corp.CurrentMatch = &m
+			m.Runner.CurrentMatch = &m
+		}
 	}
 }
 
 func (r *Round) Finish() error {
-	for _, m := range r.Matches {
-		if !m.Concluded {
-			return errors.New("Some matches not recorded")
+	if r.started && !r.finished {
+		for _, m := range r.Matches {
+			if !m.Concluded {
+				return errors.New("Some matches not recorded")
+			}
 		}
+		for _, m := range r.Matches {
+			m.Corp.Prestige += m.GetPrestige(m.Corp)
+			m.Runner.Prestige += m.GetPrestige(m.Runner)
+
+			m.Corp.FinishedMatches = append(m.Corp.FinishedMatches, &m)
+			m.Runner.FinishedMatches = append(m.Runner.FinishedMatches, &m)
+
+			m.Corp.CurrentMatch = nil
+			m.Runner.CurrentMatch = nil
+		}
+
+		r.Tournament.updateSoS()
+		r.Tournament.sortPlayers()
 	}
-	for _, m := range r.Matches {
-		m.Corp.Prestige += m.GetPrestige(m.Corp)
-		m.Runner.Prestige += m.GetPrestige(m.Runner)
-
-		m.Corp.FinishedMatches = append(m.Corp.FinishedMatches, &m)
-		m.Runner.FinishedMatches = append(m.Runner.FinishedMatches, &m)
-
-		m.Corp.CurrentMatch = nil
-		m.Runner.CurrentMatch = nil
-	}
-
-	r.Tournament.updateSoS()
-	r.Tournament.sortPlayers()
 
 	return nil
 }
