@@ -18,6 +18,9 @@ type Tournament struct {
 }
 
 func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) error {
+	if Name == "" {
+		return errors.New("Player name cannot be blank")
+	}
 	for _, pi := range t.Players {
 		if pi.Name == Name {
 			return errors.New("Duplicate player name")

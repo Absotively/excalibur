@@ -6,9 +6,6 @@
 * Restore previous state (undo)
 * Update standings more frequently
 * Fix HTML
-* Fix randomness! (or more precisely, un-fix randomness)
-* Fix display when IDs not entered
-* Add menu link to matches display
-* Disallow blank player names
 * Sort matches?
 * Previous rounds display
+* Fix SoS and XSoS

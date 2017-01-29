@@ -2,8 +2,10 @@ package main
 
 import (
 	"html/template"
+	"math/rand"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 var tournament Tournament
@@ -128,6 +130,8 @@ func seeOther(w http.ResponseWriter, l string) {
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	http.HandleFunc("/", menu)
 	http.HandleFunc("/players", playerList)
 	http.HandleFunc("/players/add", addPlayer)

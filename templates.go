@@ -12,7 +12,7 @@ const menuTemplate = `<h1>Tournament menu</h1>
 
 const playerListTemplate = `<h1>Players</h1>
 {{if .Players}}<ul>
-{{range .Players}}<li>{{.Name}} ({{.Corp}}, {{.Runner}})</li>
+{{range .Players}}<li>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</li>
 {{end}}
 </table>
 {{end}}
@@ -27,6 +27,7 @@ const standingsTemplate = `<h1>Standings</h1>
 {{end}}
 </table>
 {{end}}
+<p><a href="/">Menu</a></p>
 `
 
 const addPlayerTemplate = `<h1>Add player</h1>
@@ -50,6 +51,7 @@ const matchesTemplate = `{{$roundNum := .Number}}<h1>Round {{$roundNum}}</h1>
 </tr>
 {{end}}
 </table>
+<p><a href="/">Menu</a></p>
 `
 
 const noMatchesTemplate = `<h1>Matches</h1>
