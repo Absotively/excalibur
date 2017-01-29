@@ -97,18 +97,18 @@ func (t *Tournament) updateSoS() {
 
 		// Update SoS
 		for _, p := range t.Players {
-			var SoSSum int
+			var SoSSum float64
 			var matchCount int
 			for _, m := range p.FinishedMatches {
 				if !m.IsBye() {
-					SoSSum += m.GetOpponent(p).Prestige
+					SoSSum += m.GetOpponent(p).PrestigeAvg
 					matchCount += 1
 				}
 			}
 			if matchCount == 0 {
 				p.SoS = 0
 			} else {
-				p.SoS = float64(SoSSum) / float64(matchCount)
+				p.SoS = SoSSum / float64(matchCount)
 			}
 		}
 
@@ -118,7 +118,7 @@ func (t *Tournament) updateSoS() {
 			var matchCount int
 			for _, m := range p.FinishedMatches {
 				if !m.IsBye() {
-					xSoSSum += m.GetOpponent(p).XSoS
+					xSoSSum += m.GetOpponent(p).SoS
 					matchCount += 1
 				}
 			}
@@ -593,6 +593,7 @@ func (r *Round) Finish() error {
 			}
 		}
 
+		r.Tournament.sosUpToDate = false
 		r.Tournament.updateSoS()
 		r.Tournament.sortPlayers()
 	}
