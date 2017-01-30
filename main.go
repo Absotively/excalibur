@@ -140,5 +140,5 @@ func main() {
 	http.HandleFunc("/recordResult", recordResult)
 	http.HandleFunc("/finishRound", finishRound)
 	http.HandleFunc("/nextRound", startRound)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe("localhost:8080", nil)
 }
