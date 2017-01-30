@@ -16,3 +16,6 @@
 * Fix the tests I broke and then ignored
 * Add more tests
 * Open browser automatically? (like http://stackoverflow.com/a/39324149 )
+* Listen only to localhost
+* Figure out how to reassure Windows Firewall that we only want to listen to localhost
+* Move everything in this file into github issues
