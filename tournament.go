@@ -134,26 +134,44 @@ func (t *Tournament) updateSoS() {
 
 func (t *Tournament) sortPlayers() {
 	t.updateSoS()
-	sort.Sort(t.Players)
+	t.scoreGroups = orderPlayers(t.Players, false)
+}
 
-	// Record the score groups
-	t.scoreGroups = make(map[int]int)
+func shuffleGroups(players Players) {
+	orderPlayers(players, true)
+}
+
+func orderPlayers(players Players, shuffleGroups bool) (scoreGroups map[int]int) {
+	sort.Sort(players)
+
+	// Record & sort or shuffle the score groups
+	scoreGroups = make(map[int]int)
 	group := 1
 	score := -1
 	groupStart := 0
-	for i, p := range t.Players {
+	for i, p := range players {
 		if p.Prestige != score {
 			score = p.Prestige
-			t.scoreGroups[score] = group
+			scoreGroups[score] = group
 			group += 1
 			if i != 0 {
-				sortScoreGroup(t.Players[groupStart : i-1])
+				if shuffleGroups {
+					shufflePlayers(players[groupStart : i-1])
+				} else {
+					sortScoreGroup(players[groupStart : i-1])
+				}
 			}
 			groupStart = i
 		}
 	}
 	// sort last score group
-	sortScoreGroup(t.Players[groupStart:])
+	if shuffleGroups {
+		shufflePlayers(players[groupStart:])
+	} else {
+		sortScoreGroup(players[groupStart:])
+	}
+
+	return scoreGroups
 }
 
 // sortScoreGroup actually just randomizes ties; SoS and xSoS are handled when the whole list is sorted
@@ -560,6 +578,7 @@ func (r *Round) MakeMatches() {
 
 		var basePartialMatch partialRound
 		basePartialMatch.UnmatchedPlayers = append(basePartialMatch.UnmatchedPlayers, r.Tournament.Players...)
+		shuffleGroups(basePartialMatch.UnmatchedPlayers)
 
 		basePartialMatch.Tournament = r.Tournament
 		partials <- basePartialMatch
