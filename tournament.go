@@ -207,17 +207,21 @@ type partialRound struct {
 }
 
 type pairingDetails struct {
-	rematch   int    // number of times these players have played already
-	groupDiff int    // difference between the group numbers of the two players
-	sideDiffs [2]int // for each player, what their side diff will be after the round
-	streaks   [2]int // for each player, what their streak will be after the round
+	rematch     int    // number of times these players have played already
+	groupDiff   int    // difference between the group numbers of the two players
+	sideDiffs   [2]int // for each player, what their side diff will be after the round
+	streaks     [2]int // for each player, what their streak will be after the round
+	isBye       bool   // whether this is a bye
+	byePrestige int    // how many points the player has, if this is a bye
 }
 
 type roundGoodness struct {
-	rematches  []int // rematches[i] = number of pairs that are matched for the i-th time
-	groupDiffs []int // groupDiffs[i] = number of pairs that are matched across i groups
-	sideDiffs  []int // sideDiffs[i] = number of players that will have a side diff of i after the round
-	streaks    []int // streaks[i] = number of players that will have a streak of i after the round
+	rematches   []int // rematches[i] = number of pairs that are matched for the i-th time
+	groupDiffs  []int // groupDiffs[i] = number of pairs that are matched across i groups
+	sideDiffs   []int // sideDiffs[i] = number of players that will have a side diff of i after the round
+	streaks     []int // streaks[i] = number of players that will have a streak of i after the round
+	hasBye      bool  // whether there's at least one player with a bye
+	byePrestige int   // how many prestige points the player with the bye has
 }
 
 func (g1 *roundGoodness) BetterThan(g2 *roundGoodness) bool {
@@ -233,6 +237,15 @@ func (g1 *roundGoodness) BetterThan(g2 *roundGoodness) bool {
 			} else if g1.rematches[i] > g2.rematches[i] {
 				return false
 			}
+		}
+	}
+
+	// better to assign the bye to a player with a lower score
+	if g1.hasBye && g2.hasBye {
+		if g1.byePrestige < g2.byePrestige {
+			return true
+		} else if g1.byePrestige > g2.byePrestige {
+			return false
 		}
 	}
 
@@ -321,6 +334,14 @@ func (g *roundGoodness) addPairing(p pairingDetails) {
 	}
 	g.rematches[p.rematch] += 1
 
+	if p.isBye {
+		if !g.hasBye || p.byePrestige > g.byePrestige {
+			// if multiple byes, byePrestige is the highest of the prestiges of players with byes
+			g.byePrestige = p.byePrestige
+		}
+		g.hasBye = true
+	}
+
 	if len(g.groupDiffs)-1 < p.groupDiff {
 		a := p.groupDiff - len(g.groupDiffs) + 1
 		g.groupDiffs = append(g.groupDiffs, make([]int, a)...)
@@ -361,15 +382,10 @@ func (t *Tournament) pairingEffects(corp, runner *Player) pairingDetails {
 	}
 
 	if runner == nil {
-		var lowestScore int
-		for s := range t.scoreGroups {
-			if s < lowestScore {
-				lowestScore = s
-			}
-		}
+		d.isBye = true
+		d.byePrestige = corp.Prestige
 
-		d.groupDiff = t.scoreGroups[corp.Prestige] - t.scoreGroups[lowestScore]
-		d.groupDiff += 1 // treat bye as being in its own score group below the last score group
+		d.groupDiff = 0 // don't include byes in score group difference comparisons
 
 		d.sideDiffs[0], d.streaks[0] = playerByeEffects(corp)
 	} else {
