@@ -11,10 +11,9 @@ const menuTemplate = `<h1>Tournament menu</h1>
 `
 
 const playerListTemplate = `<h1>Players</h1>
-{{if .Players}}<ul>
-{{range .Players}}<li>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</li>
-{{end}}
-</table>
+{{if .Players}}<table>
+{{range .Players}}<tr><td>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</td><td><a href="/players/drop?name={{.Name}}">drop</a></td></tr>
+{{end}}</table>
 {{end}}
 <p><a href="/players/add">Add player</a></p>
 <p><a href="/">Menu</a></p>

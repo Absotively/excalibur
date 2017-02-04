@@ -44,6 +44,17 @@ func addPlayer(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, data)
 }
 
+func dropPlayer(w http.ResponseWriter, r *http.Request) {
+	name := r.FormValue("name")
+	for _, player := range tournament.Players {
+		if player.Name == name {
+			tournament.DropPlayer(player)
+			break
+		}
+	}
+	seeOther(w, "/players")
+}
+
 func menu(w http.ResponseWriter, r *http.Request) {
 	t, _ := template.New("menu").Parse(menuTemplate)
 	t.Execute(w, nil)
@@ -135,6 +146,7 @@ func main() {
 	http.HandleFunc("/", menu)
 	http.HandleFunc("/players", playerList)
 	http.HandleFunc("/players/add", addPlayer)
+	http.HandleFunc("/players/drop", dropPlayer)
 	http.HandleFunc("/standings", standings)
 	http.HandleFunc("/matches", matches)
 	http.HandleFunc("/recordResult", recordResult)

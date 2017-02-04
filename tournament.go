@@ -34,7 +34,7 @@ func (t *Tournament) DropPlayer(p *Player) {
 	for i, pi := range t.Players {
 		if p == pi {
 			t.DroppedPlayers = append(t.DroppedPlayers, pi)
-			t.Players = append(t.DroppedPlayers[:i], t.DroppedPlayers[i+1:]...)
+			t.Players = append(t.Players[:i], t.Players[i+1:]...)
 			break
 		}
 	}
