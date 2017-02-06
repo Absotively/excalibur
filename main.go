@@ -48,7 +48,11 @@ func dropPlayer(w http.ResponseWriter, r *http.Request) {
 	name := r.FormValue("name")
 	for _, player := range tournament.Players {
 		if player.Name == name {
-			tournament.DropPlayer(player)
+			if r.FormValue("drop") != "" {
+				tournament.DropPlayer(player)
+			} else {
+				tournament.ReAddPlayer(player)
+			}
 			break
 		}
 	}
@@ -147,6 +151,7 @@ func main() {
 	http.HandleFunc("/players", playerList)
 	http.HandleFunc("/players/add", addPlayer)
 	http.HandleFunc("/players/drop", dropPlayer)
+	http.HandleFunc("/players/re-add", dropPlayer)
 	http.HandleFunc("/standings", standings)
 	http.HandleFunc("/matches", matches)
 	http.HandleFunc("/recordResult", recordResult)

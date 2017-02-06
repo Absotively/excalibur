@@ -31,13 +31,11 @@ func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) error {
 }
 
 func (t *Tournament) DropPlayer(p *Player) {
-	for i, pi := range t.Players {
-		if p == pi {
-			t.DroppedPlayers = append(t.DroppedPlayers, pi)
-			t.Players = append(t.Players[:i], t.Players[i+1:]...)
-			break
-		}
-	}
+	p.Dropped = true
+}
+
+func (t *Tournament) ReAddPlayer(p *Player) {
+	p.Dropped = false
 }
 
 func (t *Tournament) NextRound() error {
@@ -66,6 +64,7 @@ type Player struct {
 	XSoS            float64
 	CurrentMatch    *Match `json:"-"`
 	FinishedMatches []*Match
+	Dropped         bool
 }
 
 type Players []*Player
@@ -530,10 +529,20 @@ func (p *partialRound) NextMatches(partials chan partialRound, stop chan int) {
 	stop <- 1
 }
 
+func (t Tournament) activePlayers() Players {
+	var players Players
+	for _, p := range t.Players {
+		if !p.Dropped {
+			players = append(players, p)
+		}
+	}
+	return players
+}
+
 func (r *Round) MakeMatches() {
 	var bestPairings []Pairing
 	if r.Number == 1 {
-		players := append([]*Player(nil), r.Tournament.Players...)
+		players := r.Tournament.activePlayers()
 		shufflePlayers(players)
 		if len(players)%2 == 1 {
 			players = append(players, nil)
@@ -577,7 +586,7 @@ func (r *Round) MakeMatches() {
 		}(partials, stops)
 
 		var basePartialMatch partialRound
-		basePartialMatch.UnmatchedPlayers = append(basePartialMatch.UnmatchedPlayers, r.Tournament.Players...)
+		basePartialMatch.UnmatchedPlayers = r.Tournament.activePlayers()
 		shuffleGroups(basePartialMatch.UnmatchedPlayers)
 
 		basePartialMatch.Tournament = r.Tournament
