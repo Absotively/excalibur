@@ -74,10 +74,15 @@ const matchesTemplate = `{{$roundNum := .Number}}<h1>Round {{$roundNum}}</h1>
    {{- end}}
   {{- else -}}
    Tie
-  {{- end}}
- {{- else -}}
-  <a href="/recordResult?round={{$roundNum}}&match={{.Number}}">record</a>
+  {{- end -}}
  {{- end -}}
+ {{if .Game.Pairing.Runner}}
+  {{- if .Game.Concluded}} ({{end -}}
+   <a href="/recordResult?round={{$roundNum}}&match={{.Number}}">
+   {{- if .Game.Concluded}}edit{{else}}record{{end -}}
+   </a>
+   {{- if .Game.Concluded}}){{end}}
+  {{- end -}}
 </td>
 </tr>
 {{end}}
@@ -89,15 +94,15 @@ const noMatchesTemplate = `<h1>Matches</h1>
 <p>No matches</p>
 `
 
-const recordMatchTemplate = `<h1>Record match result</h1>
+const recordMatchTemplate = `<h1>{{if .winner}}Update{{else}}Record{{end}} match result</h1>
 <form action="{{.recordurl}}" method="POST">
 <input type="hidden" name="round" value="{{.roundNum}}">
 <input type="hidden" name="match" value="{{.matchNum}}">
 <p>Winner:</p>
-<label><input type="radio" name="winner" value="corp"> {{.corp}} (Corp)</label><br>
-<label><input type="radio" name="winner" value="tie"> Tie</label><br>
-<label><input type="radio" name="winner" value="runner"> {{.runner}} (Runner)</label></p>
-<p><label><input type="checkbox" name="timed"> Timed/modified win</label></p>
+<label><input type="radio" name="winner" value="corp"{{if .corpWin}} checked{{end}}> {{.corp}} (Corp)</label><br>
+<label><input type="radio" name="winner" value="tie"{{if .tie}} checked{{end}}> Tie</label><br>
+<label><input type="radio" name="winner" value="runner"{{if .runnerWin}} checked{{end}}> {{.runner}} (Runner)</label></p>
+<p><label><input type="checkbox" name="timed"{{if .timed}} checked{{end}}> Timed/modified win</label></p>
 <p><input type="submit" value="Record"></p>
 </form>
 `

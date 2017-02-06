@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"html/template"
 	"math/rand"
 	"net/http"
@@ -192,8 +193,30 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 		data["matchNum"] = r.FormValue("match")
 		data["corp"] = match.Corp.Name
 		data["runner"] = match.Runner.Name
-		t, _ := template.New("result").Parse(recordMatchTemplate)
-		t.Execute(w, data)
+
+		if match.Game.Concluded {
+			if match.Game.CorpWin {
+				data["corpWin"] = "corpWin"
+			} else if match.Game.RunnerWin {
+				data["runnerWin"] = "runnerWin"
+			} else {
+				data["tie"] = "tie"
+			}
+
+			if match.Game.ModifiedWin {
+				data["timed"] = "timed"
+			}
+		}
+		t, e := template.New("result").Parse(recordMatchTemplate)
+		if e != nil {
+			fmt.Println(e.Error())
+			seeOther(w, "/matches")
+		}
+		e = t.Execute(w, data)
+		if e != nil {
+			fmt.Println(e.Error())
+			seeOther(w, "/matches")
+		}
 	}
 }
 

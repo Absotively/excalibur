@@ -647,13 +647,8 @@ func (r *Round) Finish() error {
 
 func (g *Game) RecordResult(winner *Player, modifiedWin bool) {
 	g.Concluded = true
-	if winner == g.Corp {
-		g.CorpWin = true
-		g.RunnerWin = false
-	} else if winner == g.Runner {
-		g.RunnerWin = true
-		g.CorpWin = false
-	}
+	g.CorpWin = (winner == g.Corp)
+	g.RunnerWin = (winner == g.Runner)
 	g.ModifiedWin = modifiedWin
 }
 
