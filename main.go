@@ -44,13 +44,17 @@ func addPlayer(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, data)
 }
 
-func dropPlayer(w http.ResponseWriter, r *http.Request) {
+func changePlayer(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "POST" {
+		seeOther(w, "/players")
+	}
+
 	name := r.FormValue("name")
 	for _, player := range tournament.Players {
 		if player.Name == name {
 			if r.FormValue("drop") != "" {
 				tournament.DropPlayer(player)
-			} else {
+			} else if r.FormValue("re-add") != "" {
 				tournament.ReAddPlayer(player)
 			}
 			break
@@ -150,8 +154,7 @@ func main() {
 	http.HandleFunc("/", menu)
 	http.HandleFunc("/players", playerList)
 	http.HandleFunc("/players/add", addPlayer)
-	http.HandleFunc("/players/drop", dropPlayer)
-	http.HandleFunc("/players/re-add", dropPlayer)
+	http.HandleFunc("/players/change", changePlayer)
 	http.HandleFunc("/standings", standings)
 	http.HandleFunc("/matches", matches)
 	http.HandleFunc("/recordResult", recordResult)

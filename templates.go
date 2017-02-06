@@ -12,7 +12,7 @@ const menuTemplate = `<h1>Tournament menu</h1>
 
 const playerListTemplate = `<h1>Players</h1>
 {{if .Players}}<table>
-{{range .Players}}<tr><td>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</td><td>{{if .Dropped}}Dropped <form action="/players/re-add" method="POST"><input type="hidden" name="name" value="{{.Name}}"><input type="submit" name="re-add" value="Re-add"></form>{{else}}<form action="/players/drop" method="POST"><input type="hidden" name="name" value="{{.Name}}"><input type="submit" name="drop" value="Drop"></form>{{end}}</td></tr>
+{{range .Players}}<form action="/players/change" method="POST"><input type="hidden" name="name" value="{{.Name}}"><tr><td>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</td><td>{{if .Dropped}}Dropped <input type="submit" name="re-add" value="Re-add">{{else}}<input type="submit" name="drop" value="Drop">{{end}}</td></tr></form>
 {{end}}</table>
 {{end}}
 <p><a href="/players/add">Add player</a></p>
