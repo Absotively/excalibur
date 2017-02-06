@@ -1,5 +1,16 @@
 package main
 
+const frameTemplate = `<!DOCTYPE html>
+<html>
+<head>
+<title>Excalibur - Netrunner tournament</title>
+</head>
+<body>
+{{template "content" .}}
+</body>
+</html>
+`
+
 const menuTemplate = `<h1>Tournament menu</h1>
 <ul>
 <li><a href="/players">Players</a></li>

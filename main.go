@@ -12,14 +12,31 @@ import (
 
 var tournament Tournament
 
+func applyTemplate(w http.ResponseWriter, src string, data interface{}) error {
+	t, e := template.New("base").Parse(frameTemplate)
+	if e != nil {
+		fmt.Println(e.Error())
+		return e
+	}
+	_, e = t.New("content").Parse(src)
+	if e != nil {
+		fmt.Println(e.Error())
+		return e
+	}
+	e = t.Execute(w, data)
+	if e != nil {
+		fmt.Println(e.Error())
+		return e
+	}
+	return nil
+}
+
 func playerList(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.New("players").Parse(playerListTemplate)
-	t.Execute(w, tournament)
+	applyTemplate(w, playerListTemplate, tournament)
 }
 
 func standings(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.New("players").Parse(standingsTemplate)
-	t.Execute(w, tournament)
+	applyTemplate(w, standingsTemplate, tournament)
 }
 
 func playerForm(w http.ResponseWriter, r *http.Request) {
@@ -88,8 +105,7 @@ func playerForm(w http.ResponseWriter, r *http.Request) {
 		data["add"] = "add"
 	}
 
-	t, _ := template.New("addPlayer").Parse(playerFormTemplate)
-	t.Execute(w, data)
+	applyTemplate(w, playerFormTemplate, data)
 }
 
 func changePlayer(w http.ResponseWriter, r *http.Request) {
@@ -119,16 +135,14 @@ func changePlayer(w http.ResponseWriter, r *http.Request) {
 }
 
 func menu(w http.ResponseWriter, r *http.Request) {
-	t, _ := template.New("menu").Parse(menuTemplate)
-	t.Execute(w, nil)
+	applyTemplate(w, menuTemplate, nil)
 }
 
 func startRound(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		e := tournament.NextRound()
 		if e != nil {
-			t, _ := template.New("error").Parse(errorTemplate)
-			t.Execute(w, e)
+			applyTemplate(w, errorTemplate, e)
 		} else {
 			seeOther(w, "/matches")
 		}
@@ -141,8 +155,7 @@ func finishRound(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" && len(tournament.Rounds) > 0 {
 		e := tournament.Rounds[len(tournament.Rounds)-1].Finish()
 		if e != nil {
-			t, _ := template.New("error").Parse(errorTemplate)
-			t.Execute(w, e)
+			applyTemplate(w, errorTemplate, e)
 			return
 		}
 	}
@@ -151,11 +164,9 @@ func finishRound(w http.ResponseWriter, r *http.Request) {
 
 func matches(w http.ResponseWriter, r *http.Request) {
 	if len(tournament.Rounds) == 0 || len(tournament.Rounds[len(tournament.Rounds)-1].Matches) == 0 {
-		t, _ := template.New("matches").Parse(noMatchesTemplate)
-		t.Execute(w, nil)
+		applyTemplate(w, noMatchesTemplate, nil)
 	} else {
-		t, _ := template.New("matches").Parse(matchesTemplate)
-		t.Execute(w, tournament.Rounds[len(tournament.Rounds)-1])
+		applyTemplate(w, matchesTemplate, tournament.Rounds[len(tournament.Rounds)-1])
 	}
 }
 
@@ -207,14 +218,8 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 				data["timed"] = "timed"
 			}
 		}
-		t, e := template.New("result").Parse(recordMatchTemplate)
+		e := applyTemplate(w, recordMatchTemplate, data)
 		if e != nil {
-			fmt.Println(e.Error())
-			seeOther(w, "/matches")
-		}
-		e = t.Execute(w, data)
-		if e != nil {
-			fmt.Println(e.Error())
 			seeOther(w, "/matches")
 		}
 	}
