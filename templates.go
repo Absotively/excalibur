@@ -25,6 +25,7 @@ const menuTemplate = `<h1>Tournament menu</h1>
 <li><a href="/players">Players</a></li>
 <li><a href="/standings">Standings</a></li>
 <li><a href="/matches">Current Round Matches</a></li>
+<li><a href="/rounds">All rounds</a></li>
 <li><form action="/finishRound" method="POST"><input type="submit" value="Finish round"></form></li>
 <li><form action="/nextRound" method="POST"><input type="submit" value="Start next round"></form></li>
 </ul>
@@ -113,6 +114,8 @@ const matchesTemplate = `{{$roundNum := .Number}}<h1>Round {{$roundNum}}</h1>
 const noMatchesTemplate = `<h1>Matches</h1>
 <p>No matches</p>
 `
+
+const roundsTemplate = `{{range .Rounds}}{{template "round" .}}{{end}}`
 
 const recordMatchTemplate = `<h1>{{if .winner}}Update{{else}}Record{{end}} match result</h1>
 <form action="{{.recordurl}}" method="POST">

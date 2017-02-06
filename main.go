@@ -163,10 +163,29 @@ func finishRound(w http.ResponseWriter, r *http.Request) {
 }
 
 func matches(w http.ResponseWriter, r *http.Request) {
-	if len(tournament.Rounds) == 0 || len(tournament.Rounds[len(tournament.Rounds)-1].Matches) == 0 {
-		applyTemplate(w, noMatchesTemplate, nil)
+	if len(tournament.Rounds) == 0 {
+		applyTemplate(w, noMatchesTemplate, Round{})
 	} else {
 		applyTemplate(w, matchesTemplate, tournament.Rounds[len(tournament.Rounds)-1])
+	}
+}
+
+func rounds(w http.ResponseWriter, r *http.Request) {
+	t, e := template.New("base").Parse(frameTemplate)
+	if e != nil {
+		fmt.Println(e.Error())
+	}
+	c, e := t.New("content").Parse(roundsTemplate)
+	if e != nil {
+		fmt.Println(e.Error())
+	}
+	_, e = c.New("round").Parse(matchesTemplate)
+	if e != nil {
+		fmt.Println(e.Error())
+	}
+	e = t.Execute(w, tournament)
+	if e != nil {
+		fmt.Println(e.Error())
 	}
 }
 
@@ -239,6 +258,7 @@ func main() {
 	http.HandleFunc("/players/change", changePlayer)
 	http.HandleFunc("/standings", standings)
 	http.HandleFunc("/matches", matches)
+	http.HandleFunc("/rounds", rounds)
 	http.HandleFunc("/recordResult", recordResult)
 	http.HandleFunc("/finishRound", finishRound)
 	http.HandleFunc("/nextRound", startRound)
