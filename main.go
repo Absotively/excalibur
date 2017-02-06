@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"html/template"
 	"math/rand"
 	"net/http"
@@ -20,36 +21,89 @@ func standings(w http.ResponseWriter, r *http.Request) {
 	t.Execute(w, tournament)
 }
 
-func addPlayer(w http.ResponseWriter, r *http.Request) {
+func playerForm(w http.ResponseWriter, r *http.Request) {
 	data := map[string]string{"saveurl": r.URL.Path}
-	if r.Method == "POST" {
-		name := r.FormValue("name")
-		corp := r.FormValue("corp")
-		runner := r.FormValue("runner")
+	edit := (r.FormValue("edit") != "" || (r.FormValue("name") != "" && r.Method == "GET"))
+	if !edit {
+		data["add"] = "add"
+	}
 
-		e := tournament.AddPlayer(name, corp, runner)
+	var e error
+	name := r.FormValue("name")
+	oldName := r.FormValue("old-name")
+	corp := r.FormValue("corp")
+	runner := r.FormValue("runner")
+
+	if r.Method == "POST" {
+		if edit {
+			e = errors.New("No such player")
+			for _, player := range tournament.Players {
+				if player.Name == oldName {
+					player.Name = name
+					player.Corp = corp
+					player.Runner = runner
+					e = nil
+					break
+				}
+			}
+		} else {
+			e = tournament.AddPlayer(name, corp, runner)
+		}
 
 		if e == nil {
 			seeOther(w, "/players")
 			return
 		}
-
-		data["error"] = e.Error()
-		data["name"] = name
-		data["corp"] = corp
-		data["runner"] = runner
 	}
 
-	t, _ := template.New("addPlayer").Parse(addPlayerTemplate)
+	// either need initial form or edit/add failed
+	if edit {
+		if oldName == "" {
+			oldName = name
+		}
+		for _, player := range tournament.Players {
+			if player.Name == oldName {
+				if name == "" {
+					name = player.Name
+				}
+				if corp == "" {
+					corp = player.Corp
+				}
+				if runner == "" {
+					runner = player.Runner
+				}
+			}
+		}
+	}
+
+	if e != nil {
+		data["error"] = e.Error()
+	}
+	data["name"] = name
+	data["oldName"] = oldName
+	data["corp"] = corp
+	data["runner"] = runner
+	if !edit {
+		data["add"] = "add"
+	}
+
+	t, _ := template.New("addPlayer").Parse(playerFormTemplate)
 	t.Execute(w, data)
 }
 
 func changePlayer(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "POST" {
-		seeOther(w, "/players")
+	name := r.FormValue("name")
+
+	if name != "" && (r.Method == "GET" || r.FormValue("edit") != "") {
+		playerForm(w, r)
+		return
 	}
 
-	name := r.FormValue("name")
+	if r.Method != "POST" {
+		seeOther(w, "/players")
+		return
+	}
+
 	for _, player := range tournament.Players {
 		if player.Name == name {
 			if r.FormValue("drop") != "" {
@@ -153,7 +207,7 @@ func main() {
 
 	http.HandleFunc("/", menu)
 	http.HandleFunc("/players", playerList)
-	http.HandleFunc("/players/add", addPlayer)
+	http.HandleFunc("/players/add", playerForm)
 	http.HandleFunc("/players/change", changePlayer)
 	http.HandleFunc("/standings", standings)
 	http.HandleFunc("/matches", matches)

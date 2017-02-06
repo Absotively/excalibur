@@ -12,7 +12,7 @@ const menuTemplate = `<h1>Tournament menu</h1>
 
 const playerListTemplate = `<h1>Players</h1>
 {{if .Players}}<table>
-{{range .Players}}<form action="/players/change" method="POST"><input type="hidden" name="name" value="{{.Name}}"><tr><td>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</td><td>{{if .Dropped}}Dropped <input type="submit" name="re-add" value="Re-add">{{else}}<input type="submit" name="drop" value="Drop">{{end}}</td></tr></form>
+{{range .Players}}<form action="/players/change" method="POST"><input type="hidden" name="name" value="{{.Name}}"><tr><td>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</td><td><a href="/players/change?name={{.Name}}">edit</a></td><td>{{if .Dropped}}Dropped <input type="submit" name="re-add" value="Re-add">{{else}}<input type="submit" name="drop" value="Drop">{{end}}</td></tr></form>
 {{end}}</table>
 {{end}}
 <p><a href="/players/add">Add player</a></p>
@@ -29,13 +29,14 @@ const standingsTemplate = `<h1>Standings</h1>
 <p><a href="/">Menu</a></p>
 `
 
-const addPlayerTemplate = `<h1>Add player</h1>
+const playerFormTemplate = `<h1>{{if .add}}Add{{else}}Edit{{end}} player</h1>
 {{if .error}}<p><strong>Error: {{.error}}</p></strong>{{end}}
 <form action="{{.saveurl}}" method="POST">
 <label>Name: <input type="text" name="name" autofocus{{if .name}} value="{{.name}}"{{end}}></label><br>
+{{- if or .name .oldName}}<input type="hidden" name="old-name" value="{{if .oldName}}{{.oldName}}{{else}}{{.name}}{{end}}">{{end -}}
 <label>Corp: <input type="text" name="corp"{{if .corp}} value="{{.corp}}"{{end}}></label><br>
 <label>Runner: <input type="text" name="runner"{{if .runner}} value="{{.runner}}"{{end}}></label><br>
-<input type="submit" value="Add">
+<input type="submit" {{if .add}}name="add" value="Add"{{else}}name="edit" value="Change"{{end}}>
 </form>
 `
 
