@@ -4,6 +4,15 @@ const frameTemplate = `<!DOCTYPE html>
 <html>
 <head>
 <title>Excalibur - Netrunner tournament</title>
+<style>
+table { border-collapse: collapse; }
+td, th { padding: 0.4em 0.8em; border-bottom: 1px solid #aaaaaa; }
+th { font-weight: bold }
+td.winner {font-weight: bold }
+td.corp { border-bottom: 2px solid #0000aa; }
+td.runner { border-bottom: 2px solid #aa0000; }
+li { padding-bottom: 0.4em; }
+</style>
 </head>
 <body>
 {{template "content" .}}
