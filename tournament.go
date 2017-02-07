@@ -71,8 +71,8 @@ type Player struct {
 	PrestigeAvg     float64
 	SoS             float64
 	XSoS            float64
-	CurrentMatch    *Match `json:"-"`
-	FinishedMatches []*Match
+	CurrentMatch    MatchID `json:"-"`
+	FinishedMatches []MatchID
 	Dropped         bool
 }
 
@@ -127,7 +127,8 @@ func (t *Tournament) updateSoS() {
 		for _, p := range t.Players {
 			var SoSSum float64
 			var matchCount int
-			for _, m := range p.FinishedMatches {
+			for _, mID := range p.FinishedMatches {
+				m := t.Match(mID)
 				if !m.IsBye() {
 					SoSSum += t.Player(m.GetOpponent(p.PlayerID)).PrestigeAvg
 					matchCount += 1
@@ -144,7 +145,8 @@ func (t *Tournament) updateSoS() {
 		for _, p := range t.Players {
 			var xSoSSum float64
 			var matchCount int
-			for _, m := range p.FinishedMatches {
+			for _, mID := range p.FinishedMatches {
+				m := t.Match(mID)
 				if !m.IsBye() {
 					xSoSSum += t.Player(m.GetOpponent(p.PlayerID)).SoS
 					matchCount += 1
@@ -423,7 +425,8 @@ func (t *Tournament) pairingEffects(corpID, runnerID PlayerID) pairingDetails {
 
 	corp := t.Player(corpID)
 	runner := t.Player(runnerID)
-	for _, m := range corp.FinishedMatches {
+	for _, mID := range corp.FinishedMatches {
+		m := t.Match(mID)
 		if m.Corp == runnerID || m.Runner == runnerID {
 			d.rematch += 1
 		}
@@ -452,8 +455,8 @@ func (t *Tournament) pairingEffects(corpID, runnerID PlayerID) pairingDetails {
 func (t *Tournament) playerCorpEffects(p PlayerID) (sideDiff, streak int) {
 	sideDiff = 1
 	streak = 1
-	for _, m := range t.Player(p).FinishedMatches {
-		if m.Corp == p {
+	for _, mID := range t.Player(p).FinishedMatches {
+		if t.Match(mID).Corp == p {
 			sideDiff += 1
 			streak += 1
 		} else {
@@ -471,8 +474,8 @@ func (t *Tournament) playerCorpEffects(p PlayerID) (sideDiff, streak int) {
 func (t *Tournament) playerRunnerEffects(p PlayerID) (sideDiff, streak int) {
 	sideDiff = -1
 	streak = 1
-	for _, m := range t.Player(p).FinishedMatches {
-		if m.Corp == p {
+	for _, mID := range t.Player(p).FinishedMatches {
+		if t.Match(mID).Corp == p {
 			sideDiff += 1
 			streak = 1
 		} else {
@@ -491,8 +494,8 @@ func (t *Tournament) playerByeEffects(p PlayerID) (sideDiff, streak int) {
 	sideDiff = 0
 	streak = 0
 	runnerStreak := true
-	for _, m := range t.Player(p).FinishedMatches {
-		if m.Corp == p {
+	for _, mID := range t.Player(p).FinishedMatches {
+		if t.Match(mID).Corp == p {
 			sideDiff += 1
 			if runnerStreak {
 				streak = 1
@@ -640,9 +643,10 @@ func (r *Round) Start() {
 	if !r.started {
 		r.started = true
 		for _, m := range r.Matches {
-			r.Tournament.Player(m.Corp).CurrentMatch = &m
+			mID := MatchID{r.Number, m.Number}
+			r.Tournament.Player(m.Corp).CurrentMatch = mID
 			if m.Runner != NoPlayer {
-				r.Tournament.Player(m.Runner).CurrentMatch = &m
+				r.Tournament.Player(m.Runner).CurrentMatch = mID
 			}
 		}
 	}
@@ -656,17 +660,17 @@ func (r *Round) Finish() error {
 				return errors.New("Some matches not recorded")
 			}
 		}
-		for i, _ := range r.Matches {
-			m := &(r.Matches[i])
+		for _, m := range r.Matches {
+			mID := MatchID{r.Number, m.Number}
 			corp := r.Tournament.Player(m.Corp)
 			runner := r.Tournament.Player(m.Runner)
 			corp.Prestige += m.GetPrestige(m.Corp)
-			corp.FinishedMatches = append(corp.FinishedMatches, m)
-			corp.CurrentMatch = nil
+			corp.FinishedMatches = append(corp.FinishedMatches, mID)
+			corp.CurrentMatch = MatchID{}
 			if runner != nil {
 				runner.Prestige += m.GetPrestige(m.Runner)
-				runner.FinishedMatches = append(runner.FinishedMatches, m)
-				runner.CurrentMatch = nil
+				runner.FinishedMatches = append(runner.FinishedMatches, mID)
+				runner.CurrentMatch = MatchID{}
 			}
 		}
 
@@ -725,6 +729,25 @@ type Pairing struct {
 type Match struct {
 	Game
 	Number int
+}
+
+type MatchID struct {
+	Round int
+	Match int
+}
+
+func (t *Tournament) Match(m MatchID) *Match {
+	if m.Round < 1 || m.Round > len(t.Rounds) {
+		return nil
+	}
+
+	r := &(t.Rounds[m.Round-1])
+
+	if m.Match < 1 || m.Match > len(r.Matches) {
+		return nil
+	}
+
+	return &(r.Matches[m.Match-1])
 }
 
 func (m Match) IsBye() bool {
