@@ -28,6 +28,7 @@ const menuTemplate = `<h1>Tournament menu</h1>
 <li><a href="/rounds">All rounds</a></li>
 <li><form action="/finishRound" method="POST"><input type="submit" value="Finish round"></form></li>
 <li><form action="/nextRound" method="POST"><input type="submit" value="Start next round"></form></li>
+<li><a href="/save">Save tournament</a></li>
 </ul>
 `
 

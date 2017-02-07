@@ -1,8 +1,8 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"sort"
@@ -13,8 +13,8 @@ type Tournament struct {
 	Players     []Player
 	Standings   []PlayerID
 	Rounds      []Round
-	sosUpToDate bool
-	scoreGroups map[int]int
+	SosUpToDate bool
+	ScoreGroups map[int]int
 }
 
 func (t *Tournament) Player(id PlayerID) *Player {
@@ -71,7 +71,7 @@ type Player struct {
 	PrestigeAvg     float64
 	SoS             float64
 	XSoS            float64
-	CurrentMatch    MatchID `json:"-"`
+	CurrentMatch    MatchID
 	FinishedMatches []MatchID
 	Dropped         bool
 }
@@ -111,7 +111,7 @@ func (s *playerSorter) Less(i, j int) bool {
 }
 
 func (t *Tournament) updateSoS() {
-	if !t.sosUpToDate {
+	if !t.SosUpToDate {
 		// Update prestige averages
 		for _, p := range t.Players {
 			// Note that byes are counted here, because
@@ -158,13 +158,13 @@ func (t *Tournament) updateSoS() {
 				p.XSoS = xSoSSum / float64(matchCount)
 			}
 		}
-		t.sosUpToDate = true
+		t.SosUpToDate = true
 	}
 }
 
 func (t *Tournament) sortPlayers(p []PlayerID) {
 	t.updateSoS()
-	t.scoreGroups = orderPlayers(t, t.Standings, false)
+	t.ScoreGroups = orderPlayers(t, t.Standings, false)
 }
 
 func shuffleGroups(t *Tournament, players []PlayerID) {
@@ -243,8 +243,8 @@ type Round struct {
 	Tournament *Tournament `json:"-"`
 	Number     int
 	Matches    []Match
-	started    bool
-	finished   bool
+	Started    bool
+	Finished   bool
 }
 
 type partialRound struct {
@@ -440,7 +440,7 @@ func (t *Tournament) pairingEffects(corpID, runnerID PlayerID) pairingDetails {
 
 		d.sideDiffs[0], d.streaks[0] = t.playerByeEffects(corpID)
 	} else {
-		d.groupDiff = t.scoreGroups[corp.Prestige] - t.scoreGroups[runner.Prestige]
+		d.groupDiff = t.ScoreGroups[corp.Prestige] - t.ScoreGroups[runner.Prestige]
 		if d.groupDiff < 0 {
 			d.groupDiff = -d.groupDiff
 		}
@@ -640,8 +640,8 @@ func (r *Round) MakeMatches() {
 }
 
 func (r *Round) Start() {
-	if !r.started {
-		r.started = true
+	if !r.Started {
+		r.Started = true
 		for _, m := range r.Matches {
 			mID := MatchID{r.Number, m.Number}
 			r.Tournament.Player(m.Corp).CurrentMatch = mID
@@ -653,8 +653,8 @@ func (r *Round) Start() {
 }
 
 func (r *Round) Finish() error {
-	if r.started && !r.finished {
-		r.finished = true
+	if r.Started && !r.Finished {
+		r.Finished = true
 		for _, m := range r.Matches {
 			if !m.Concluded {
 				return errors.New("Some matches not recorded")
@@ -674,7 +674,7 @@ func (r *Round) Finish() error {
 			}
 		}
 
-		r.Tournament.sosUpToDate = false
+		r.Tournament.SosUpToDate = false
 		r.Tournament.updateSoS()
 		r.Tournament.sortPlayers(r.Tournament.Standings)
 	}
@@ -788,23 +788,28 @@ func (m Match) GetWinner() PlayerID {
 	}
 }
 
-func (t *Tournament) save() error {
-	filename := t.Name + ".tournament"
-	return ioutil.WriteFile(filename, nil, 0600)
-}
-
-func loadTournament(title string) (*Tournament, error) {
-	filename := title + ".tournament"
-	_, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return nil, err
+func (t *Tournament) save(file string) error {
+	marshaled, e := json.Marshal(t)
+	if e != nil {
+		return e
 	}
-	return &Tournament{Name: title}, nil
+	return ioutil.WriteFile(file, marshaled, 0600)
 }
 
-func saveAndLoad() {
-	t1 := &Tournament{Name: "regional"}
-	t1.save()
-	t2, _ := loadTournament("regional")
-	fmt.Println(t2.Name)
+func loadTournament(t *Tournament, file string) error {
+	marshaled, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(marshaled, t)
+	if err != nil {
+		return err
+	}
+	for i, _ := range t.Players {
+		t.Players[i].Tournament = t
+	}
+	for i, _ := range t.Rounds {
+		t.Rounds[i].Tournament = t
+	}
+	return nil
 }

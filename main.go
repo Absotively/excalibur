@@ -6,11 +6,14 @@ import (
 	"html/template"
 	"math/rand"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 var tournament Tournament
+var filename string
 
 func applyTemplate(w http.ResponseWriter, src string, data interface{}) error {
 	t, e := template.New("base").Parse(frameTemplate)
@@ -241,12 +244,40 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func save(w http.ResponseWriter, r *http.Request) {
+	if filename != "" {
+		e := tournament.save(filename)
+		if e != nil {
+			fmt.Println("Error saving:", e.Error())
+		} else {
+			fmt.Println("Tournament saved")
+		}
+	}
+	seeOther(w, "/")
+}
+
 func seeOther(w http.ResponseWriter, l string) {
 	w.Header().Set("Location", l)
 	w.WriteHeader(http.StatusSeeOther)
 }
 
 func main() {
+	if len(os.Args) > 1 {
+		filename = os.Args[1]
+	}
+	if filename != "" {
+		if !strings.HasSuffix(filename, ".excalibur") {
+			filename = filename + ".excalibur"
+		}
+
+		// try to load tournament
+		e := loadTournament(&tournament, filename)
+		if e != nil {
+			fmt.Println("Tournament loading error:", e.Error())
+			tournament = Tournament{}
+		}
+	}
+
 	rand.Seed(time.Now().UnixNano())
 
 	http.HandleFunc("/", menu)
@@ -259,5 +290,6 @@ func main() {
 	http.HandleFunc("/recordResult", recordResult)
 	http.HandleFunc("/finishRound", finishRound)
 	http.HandleFunc("/nextRound", startRound)
+	http.HandleFunc("/save", save)
 	http.ListenAndServe("localhost:8080", nil)
 }
