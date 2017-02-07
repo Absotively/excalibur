@@ -36,33 +36,38 @@ func playerList(w http.ResponseWriter, r *http.Request) {
 }
 
 func standings(w http.ResponseWriter, r *http.Request) {
-	applyTemplate(w, standingsTemplate, tournament)
+	applyTemplate(w, standingsTemplate, &tournament)
 }
 
 func playerForm(w http.ResponseWriter, r *http.Request) {
 	data := map[string]string{"saveurl": r.URL.Path}
-	edit := (r.FormValue("edit") != "" || (r.FormValue("name") != "" && r.Method == "GET"))
+	edit := (r.FormValue("edit") != "" || (r.FormValue("player-id") != "" && r.Method == "GET"))
 	if !edit {
 		data["add"] = "add"
 	}
 
 	var e error
+	id := NoPlayer
 	name := r.FormValue("name")
-	oldName := r.FormValue("old-name")
 	corp := r.FormValue("corp")
 	runner := r.FormValue("runner")
+	idString := r.FormValue("player-id")
+	if idString != "" {
+		idTemp, err := strconv.Atoi(idString)
+		if err == nil {
+			id = PlayerID(idTemp)
+		}
+	}
 
 	if r.Method == "POST" {
 		if edit {
-			e = errors.New("No such player")
-			for _, player := range tournament.Players {
-				if player.Name == oldName {
-					player.Name = name
-					player.Corp = corp
-					player.Runner = runner
-					e = nil
-					break
-				}
+			player := tournament.Player(id)
+			if player != nil {
+				player.Name = name
+				player.Corp = corp
+				player.Runner = runner
+			} else {
+				e = errors.New("No such player")
 			}
 		} else {
 			e = tournament.AddPlayer(name, corp, runner)
@@ -75,32 +80,20 @@ func playerForm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// either need initial form or edit/add failed
-	if edit {
-		if oldName == "" {
-			oldName = name
-		}
-		for _, player := range tournament.Players {
-			if player.Name == oldName {
-				if name == "" {
-					name = player.Name
-				}
-				if corp == "" {
-					corp = player.Corp
-				}
-				if runner == "" {
-					runner = player.Runner
-				}
-			}
-		}
+	if edit && r.Method == "GET" {
+		player := tournament.Player(id)
+		name = player.Name
+		corp = player.Corp
+		runner = player.Runner
 	}
 
 	if e != nil {
 		data["error"] = e.Error()
 	}
 	data["name"] = name
-	data["oldName"] = oldName
 	data["corp"] = corp
 	data["runner"] = runner
+	data["id"] = idString
 	if !edit {
 		data["add"] = "add"
 	}
@@ -109,9 +102,9 @@ func playerForm(w http.ResponseWriter, r *http.Request) {
 }
 
 func changePlayer(w http.ResponseWriter, r *http.Request) {
-	name := r.FormValue("name")
+	idString := r.FormValue("player-id")
 
-	if name != "" && (r.Method == "GET" || r.FormValue("edit") != "") {
+	if idString != "" && (r.Method == "GET" || r.FormValue("edit") != "") {
 		playerForm(w, r)
 		return
 	}
@@ -121,16 +114,20 @@ func changePlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	for _, player := range tournament.Players {
-		if player.Name == name {
-			if r.FormValue("drop") != "" {
-				tournament.DropPlayer(player)
-			} else if r.FormValue("re-add") != "" {
-				tournament.ReAddPlayer(player)
-			}
-			break
+	id := NoPlayer
+	if idString != "" {
+		idTemp, err := strconv.Atoi(idString)
+		if err == nil {
+			id = PlayerID(idTemp)
 		}
 	}
+
+	if r.FormValue("drop") != "" {
+		tournament.DropPlayer(id)
+	} else if r.FormValue("re-add") != "" {
+		tournament.ReAddPlayer(id)
+	}
+
 	seeOther(w, "/players")
 }
 
@@ -202,7 +199,7 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 
 		result := r.FormValue("winner")
-		var winner *Player
+		var winner PlayerID
 		if result == "corp" {
 			winner = match.Game.Corp
 		} else if result == "runner" {
@@ -221,8 +218,8 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 		data := map[string]string{"recordurl": r.URL.Path}
 		data["roundNum"] = r.FormValue("round")
 		data["matchNum"] = r.FormValue("match")
-		data["corp"] = match.Corp.Name
-		data["runner"] = match.Runner.Name
+		data["corp"] = tournament.Player(match.Corp).Name
+		data["runner"] = tournament.Player(match.Runner).Name
 
 		if match.Game.Concluded {
 			if match.Game.CorpWin {

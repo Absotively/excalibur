@@ -33,17 +33,17 @@ const menuTemplate = `<h1>Tournament menu</h1>
 
 const playerListTemplate = `<h1>Players</h1>
 {{if .Players}}<table>
-{{range .Players}}<form action="/players/change" method="POST"><input type="hidden" name="name" value="{{.Name}}"><tr><td>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</td><td><a href="/players/change?name={{.Name}}">edit</a></td><td>{{if .Dropped}}Dropped <input type="submit" name="re-add" value="Re-add">{{else}}<input type="submit" name="drop" value="Drop">{{end}}</td></tr></form>
+{{range .Players}}<form action="/players/change" method="POST"><input type="hidden" name="player-id" value="{{.PlayerID}}"><tr><td>{{.Name}}{{if or .Corp .Runner}} ({{.Corp}}{{if and .Corp .Runner}}, {{end}}{{.Runner}}){{end}}</td><td><a href="/players/change?player-id={{.PlayerID}}">edit</a></td><td>{{if .Dropped}}Dropped <input type="submit" name="re-add" value="Re-add">{{else}}<input type="submit" name="drop" value="Drop">{{end}}</td></tr></form>
 {{end}}</table>
 {{end}}
 <p><a href="/players/add">Add player</a></p>
 <p><a href="/">Menu</a></p>
 `
 
-const standingsTemplate = `<h1>Standings</h1>
-{{if .Players}}<table id="standings">
+const standingsTemplate = `{{$t := .}}<h1>Standings</h1>
+{{if .Standings}}<table id="standings">
 <tr><th>Player</th><th>Pts</th><th>SoS</th><th>XSoS</th></tr>
-{{range .Players}}<tr><td>{{.Name}}</td><td>{{.Prestige}}</td><td>{{.SoS}}</td><td>{{.XSoS}}</td></tr>
+{{range .Standings}}{{$p := ($t.Player .)}}<tr><td>{{$p.Name}}</td><td>{{$p.Prestige}}</td><td>{{$p.SoS}}</td><td>{{$p.XSoS}}</td></tr>
 {{end}}
 </table>
 {{end}}
@@ -54,35 +54,35 @@ const playerFormTemplate = `<h1>{{if .add}}Add{{else}}Edit{{end}} player</h1>
 {{if .error}}<p><strong>Error: {{.error}}</p></strong>{{end}}
 <form action="{{.saveurl}}" method="POST">
 <label>Name: <input type="text" name="name" autofocus{{if .name}} value="{{.name}}"{{end}}></label><br>
-{{- if or .name .oldName}}<input type="hidden" name="old-name" value="{{if .oldName}}{{.oldName}}{{else}}{{.name}}{{end}}">{{end -}}
+{{- if .id}}<input type="hidden" name="player-id" value="{{.id}}">{{end -}}
 <label>Corp: <input type="text" name="corp"{{if .corp}} value="{{.corp}}"{{end}}></label><br>
 <label>Runner: <input type="text" name="runner"{{if .runner}} value="{{.runner}}"{{end}}></label><br>
 <input type="submit" {{if .add}}name="add" value="Add"{{else}}name="edit" value="Change"{{end}}>
 </form>
 `
 
-const matchesTemplate = `{{$roundNum := .Number}}<h1>Round {{$roundNum}}</h1>
+const matchesTemplate = `{{$t := .Tournament}}{{$roundNum := .Number}}<h1>Round {{$roundNum}}</h1>
 <table><tr><th>#</th><th>Corp</th><th>Runner</th><th>Result</th></tr>
 {{range .Matches}}
 <tr>
 <th>{{.Number}}</th>
 <td class="corp
  {{- if .Game.CorpWin}} winner{{end -}}
-">{{.Game.Pairing.Corp.Name}}</td>
+">{{($t.Player .Game.Pairing.Corp).Name}}</td>
 <td class="runner
  {{- if .Game.RunnerWin}} winner{{end -}}
- {{- if not .Game.Pairing.Runner}} bye{{end -}}
+ {{- if .IsBye}} bye{{end -}}
 ">
- {{- if .Game.Pairing.Runner -}}
-  {{.Game.Pairing.Runner.Name}}
+ {{- if not .IsBye -}}
+  {{($t.Player .Game.Pairing.Runner).Name}}
  {{- else -}}
   BYE
  {{- end -}}
 </td>
 <td class="result
- {{- if not .Game.Pairing.Runner}} bye{{end -}}
+ {{- if not .IsBye}} bye{{end -}}
 ">
- {{- if not .Game.Pairing.Runner -}}
+ {{- if .IsBye -}}
   BYE
  {{- else if .Game.Concluded}}
   {{- if or .Game.CorpWin .Game.RunnerWin}}
@@ -97,7 +97,7 @@ const matchesTemplate = `{{$roundNum := .Number}}<h1>Round {{$roundNum}}</h1>
    Tie
   {{- end -}}
  {{- end -}}
- {{if .Game.Pairing.Runner}}
+ {{if not .IsBye}}
   {{- if .Game.Concluded}} ({{end -}}
    <a href="/recordResult?round={{$roundNum}}&match={{.Number}}">
    {{- if .Game.Concluded}}edit{{else}}record{{end -}}

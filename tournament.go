@@ -9,12 +9,19 @@ import (
 )
 
 type Tournament struct {
-	Name string
-	Players
-	DroppedPlayers Players
-	Rounds         []Round
-	sosUpToDate    bool
-	scoreGroups    map[int]int
+	Name        string
+	Players     []Player
+	Standings   []PlayerID
+	Rounds      []Round
+	sosUpToDate bool
+	scoreGroups map[int]int
+}
+
+func (t *Tournament) Player(id PlayerID) *Player {
+	if id == NoPlayer || int(id) > len(t.Players) {
+		return nil
+	}
+	return &(t.Players[id-1])
 }
 
 func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) error {
@@ -26,16 +33,18 @@ func (t *Tournament) AddPlayer(Name string, Corp string, Runner string) error {
 			return errors.New("Duplicate player name")
 		}
 	}
-	t.Players = append(t.Players, &Player{Name: Name, Corp: Corp, Runner: Runner, Tournament: t})
+	var id PlayerID = PlayerID(len(t.Players) + 1)
+	t.Players = append(t.Players, Player{Name: Name, Corp: Corp, Runner: Runner, Tournament: t, PlayerID: id})
+	t.Standings = append(t.Standings, id)
 	return nil
 }
 
-func (t *Tournament) DropPlayer(p *Player) {
-	p.Dropped = true
+func (t *Tournament) DropPlayer(p PlayerID) {
+	t.Player(p).Dropped = true
 }
 
-func (t *Tournament) ReAddPlayer(p *Player) {
-	p.Dropped = false
+func (t *Tournament) ReAddPlayer(p PlayerID) {
+	t.Player(p).Dropped = false
 }
 
 func (t *Tournament) NextRound() error {
@@ -44,9 +53,8 @@ func (t *Tournament) NextRound() error {
 		if e != nil {
 			return e
 		}
-	} else {
-		t.sortPlayers()
 	}
+
 	t.Rounds = append(t.Rounds, Round{Tournament: t, Number: len(t.Rounds) + 1})
 	t.Rounds[len(t.Rounds)-1].MakeMatches()
 	t.Rounds[len(t.Rounds)-1].Start()
@@ -54,6 +62,7 @@ func (t *Tournament) NextRound() error {
 }
 
 type Player struct {
+	PlayerID
 	Tournament      *Tournament `json:"-"`
 	Name            string
 	Corp            string
@@ -67,17 +76,37 @@ type Player struct {
 	Dropped         bool
 }
 
-type Players []*Player
+type PlayerID int
 
-func (s Players) Len() int      { return len(s) }
-func (s Players) Swap(i, j int) { s[i], s[j] = s[j], s[i] }
-func (s Players) Less(i, j int) bool {
-	if s[i].Prestige != s[j].Prestige {
-		return s[i].Prestige > s[j].Prestige
-	} else if s[i].SoS != s[j].SoS {
-		return s[i].SoS > s[j].SoS
+const NoPlayer PlayerID = -1
+
+// playerSorter joins a Tournament pointer and a slice of PlanetIDs to be sorted.
+type playerSorter struct {
+	t *Tournament
+	p []PlayerID
+}
+
+// Len is part of sort.Interface.
+func (s *playerSorter) Len() int {
+	return len(s.p)
+}
+
+// Swap is part of sort.Interface.
+func (s *playerSorter) Swap(i, j int) {
+	s.p[i], s.p[j] = s.p[j], s.p[i]
+}
+
+// Less is part of sort.Interface. It is implemented by calling the "by" closure in the sorter.
+func (s *playerSorter) Less(i, j int) bool {
+	pi := s.t.Player(s.p[i])
+	pj := s.t.Player(s.p[j])
+
+	if pi.Prestige != pj.Prestige {
+		return pi.Prestige > pj.Prestige
+	} else if pi.SoS != pj.SoS {
+		return pi.SoS > pj.SoS
 	} else {
-		return s[i].XSoS > s[j].XSoS
+		return pi.XSoS > pj.XSoS
 	}
 }
 
@@ -100,7 +129,7 @@ func (t *Tournament) updateSoS() {
 			var matchCount int
 			for _, m := range p.FinishedMatches {
 				if !m.IsBye() {
-					SoSSum += m.GetOpponent(p).PrestigeAvg
+					SoSSum += t.Player(m.GetOpponent(p.PlayerID)).PrestigeAvg
 					matchCount += 1
 				}
 			}
@@ -117,7 +146,7 @@ func (t *Tournament) updateSoS() {
 			var matchCount int
 			for _, m := range p.FinishedMatches {
 				if !m.IsBye() {
-					xSoSSum += m.GetOpponent(p).SoS
+					xSoSSum += t.Player(m.GetOpponent(p.PlayerID)).SoS
 					matchCount += 1
 				}
 			}
@@ -131,17 +160,17 @@ func (t *Tournament) updateSoS() {
 	}
 }
 
-func (t *Tournament) sortPlayers() {
+func (t *Tournament) sortPlayers(p []PlayerID) {
 	t.updateSoS()
-	t.scoreGroups = orderPlayers(t.Players, false)
+	t.scoreGroups = orderPlayers(t, t.Standings, false)
 }
 
-func shuffleGroups(players Players) {
-	orderPlayers(players, true)
+func shuffleGroups(t *Tournament, players []PlayerID) {
+	orderPlayers(t, players, true)
 }
 
-func orderPlayers(players Players, shuffleGroups bool) (scoreGroups map[int]int) {
-	sort.Sort(players)
+func orderPlayers(t *Tournament, players []PlayerID, shuffleGroups bool) (scoreGroups map[int]int) {
+	sort.Sort(&playerSorter{t, players})
 
 	// Record & sort or shuffle the score groups
 	scoreGroups = make(map[int]int)
@@ -149,15 +178,15 @@ func orderPlayers(players Players, shuffleGroups bool) (scoreGroups map[int]int)
 	score := -1
 	groupStart := 0
 	for i, p := range players {
-		if p.Prestige != score {
-			score = p.Prestige
+		if t.Player(p).Prestige != score {
+			score = t.Player(p).Prestige
 			scoreGroups[score] = group
 			group += 1
 			if i != 0 {
 				if shuffleGroups {
 					shufflePlayers(players[groupStart : i-1])
 				} else {
-					sortScoreGroup(players[groupStart : i-1])
+					sortScoreGroup(t, players[groupStart:i-1])
 				}
 			}
 			groupStart = i
@@ -167,21 +196,21 @@ func orderPlayers(players Players, shuffleGroups bool) (scoreGroups map[int]int)
 	if shuffleGroups {
 		shufflePlayers(players[groupStart:])
 	} else {
-		sortScoreGroup(players[groupStart:])
+		sortScoreGroup(t, players[groupStart:])
 	}
 
 	return scoreGroups
 }
 
 // sortScoreGroup actually just randomizes ties; SoS and xSoS are handled when the whole list is sorted
-func sortScoreGroup(g Players) {
+func sortScoreGroup(t *Tournament, g []PlayerID) {
 	tieStart := 0
 	SoS := -1.0
 	xSoS := -1.0
 	for i, p := range g {
-		if p.SoS != SoS || p.XSoS != xSoS {
-			SoS = p.SoS
-			xSoS = p.XSoS
+		if t.Player(p).SoS != SoS || t.Player(p).XSoS != xSoS {
+			SoS = t.Player(p).SoS
+			xSoS = t.Player(p).XSoS
 			if i != 0 && i-tieStart > 1 {
 				shufflePlayers(g[tieStart : i-1])
 			}
@@ -193,7 +222,7 @@ func sortScoreGroup(g Players) {
 }
 
 // basically copied from http://marcelom.github.io/2013/06/07/goshuffle.html
-func shufflePlayers(g Players) {
+func shufflePlayers(g []PlayerID) {
 	for i := range g {
 		j := rand.Intn(i + 1)
 		g[i], g[j] = g[j], g[i]
@@ -219,7 +248,7 @@ type Round struct {
 type partialRound struct {
 	Tournament       *Tournament
 	Pairings         []Pairing
-	UnmatchedPlayers []*Player
+	UnmatchedPlayers []PlayerID
 	goodness         roundGoodness
 }
 
@@ -389,39 +418,41 @@ func (g *roundGoodness) addPairing(p pairingDetails) {
 }
 
 // will need to cache these at some point, probably
-func (t *Tournament) pairingEffects(corp, runner *Player) pairingDetails {
+func (t *Tournament) pairingEffects(corpID, runnerID PlayerID) pairingDetails {
 	var d pairingDetails
 
+	corp := t.Player(corpID)
+	runner := t.Player(runnerID)
 	for _, m := range corp.FinishedMatches {
-		if m.Corp == runner || m.Runner == runner {
+		if m.Corp == runnerID || m.Runner == runnerID {
 			d.rematch += 1
 		}
 	}
 
-	if runner == nil {
+	if runnerID == NoPlayer {
 		d.isBye = true
 		d.byePrestige = corp.Prestige
 
 		d.groupDiff = 0 // don't include byes in score group difference comparisons
 
-		d.sideDiffs[0], d.streaks[0] = playerByeEffects(corp)
+		d.sideDiffs[0], d.streaks[0] = t.playerByeEffects(corpID)
 	} else {
 		d.groupDiff = t.scoreGroups[corp.Prestige] - t.scoreGroups[runner.Prestige]
 		if d.groupDiff < 0 {
 			d.groupDiff = -d.groupDiff
 		}
 
-		d.sideDiffs[0], d.streaks[0] = playerCorpEffects(corp)
-		d.sideDiffs[1], d.streaks[1] = playerRunnerEffects(runner)
+		d.sideDiffs[0], d.streaks[0] = t.playerCorpEffects(corpID)
+		d.sideDiffs[1], d.streaks[1] = t.playerRunnerEffects(runnerID)
 	}
 
 	return d
 }
 
-func playerCorpEffects(p *Player) (sideDiff, streak int) {
+func (t *Tournament) playerCorpEffects(p PlayerID) (sideDiff, streak int) {
 	sideDiff = 1
 	streak = 1
-	for _, m := range p.FinishedMatches {
+	for _, m := range t.Player(p).FinishedMatches {
 		if m.Corp == p {
 			sideDiff += 1
 			streak += 1
@@ -437,10 +468,10 @@ func playerCorpEffects(p *Player) (sideDiff, streak int) {
 	return
 }
 
-func playerRunnerEffects(p *Player) (sideDiff, streak int) {
+func (t *Tournament) playerRunnerEffects(p PlayerID) (sideDiff, streak int) {
 	sideDiff = -1
 	streak = 1
-	for _, m := range p.FinishedMatches {
+	for _, m := range t.Player(p).FinishedMatches {
 		if m.Corp == p {
 			sideDiff += 1
 			streak = 1
@@ -456,11 +487,11 @@ func playerRunnerEffects(p *Player) (sideDiff, streak int) {
 	return
 }
 
-func playerByeEffects(p *Player) (sideDiff, streak int) {
+func (t *Tournament) playerByeEffects(p PlayerID) (sideDiff, streak int) {
 	sideDiff = 0
 	streak = 0
 	runnerStreak := true
-	for _, m := range p.FinishedMatches {
+	for _, m := range t.Player(p).FinishedMatches {
 		if m.Corp == p {
 			sideDiff += 1
 			if runnerStreak {
@@ -486,7 +517,7 @@ func playerByeEffects(p *Player) (sideDiff, streak int) {
 	return
 }
 
-func (p *partialRound) appendMatch(corp, runner *Player) partialRound {
+func (p *partialRound) appendMatch(corp, runner PlayerID) partialRound {
 	var newPartial partialRound
 	newPartial.Pairings = append([]Pairing(nil), p.Pairings...)
 	newPartial.Pairings = append(newPartial.Pairings, Pairing{Corp: corp, Runner: runner})
@@ -497,7 +528,7 @@ func (p *partialRound) appendMatch(corp, runner *Player) partialRound {
 	newPartial.goodness.addPairing(newPartial.Tournament.pairingEffects(corp, runner))
 
 	if len(p.UnmatchedPlayers) > 2 {
-		newPartial.UnmatchedPlayers = make([]*Player, 0, len(p.UnmatchedPlayers)-2)
+		newPartial.UnmatchedPlayers = make([]PlayerID, 0, len(p.UnmatchedPlayers)-2)
 
 		for _, unmatchedPlayer := range p.UnmatchedPlayers {
 			if unmatchedPlayer != corp && unmatchedPlayer != runner {
@@ -505,7 +536,7 @@ func (p *partialRound) appendMatch(corp, runner *Player) partialRound {
 			}
 		}
 	} else {
-		newPartial.UnmatchedPlayers = make([]*Player, 0)
+		newPartial.UnmatchedPlayers = make([]PlayerID, 0)
 	}
 
 	return newPartial
@@ -513,7 +544,7 @@ func (p *partialRound) appendMatch(corp, runner *Player) partialRound {
 
 func (p *partialRound) NextMatches(partials chan partialRound, stop chan int) {
 	if len(p.UnmatchedPlayers) == 1 {
-		partials <- p.appendMatch(p.UnmatchedPlayers[0], nil)
+		partials <- p.appendMatch(p.UnmatchedPlayers[0], NoPlayer)
 	} else if len(p.UnmatchedPlayers) == 2 {
 		partials <- p.appendMatch(p.UnmatchedPlayers[0], p.UnmatchedPlayers[1])
 		partials <- p.appendMatch(p.UnmatchedPlayers[1], p.UnmatchedPlayers[0])
@@ -523,17 +554,17 @@ func (p *partialRound) NextMatches(partials chan partialRound, stop chan int) {
 			partials <- p.appendMatch(playerB, p.UnmatchedPlayers[0])
 		}
 		if len(p.UnmatchedPlayers)%2 == 1 {
-			partials <- p.appendMatch(p.UnmatchedPlayers[0], nil)
+			partials <- p.appendMatch(p.UnmatchedPlayers[0], NoPlayer)
 		}
 	}
 	stop <- 1
 }
 
-func (t Tournament) activePlayers() Players {
-	var players Players
+func (t Tournament) activePlayers() []PlayerID {
+	var players []PlayerID
 	for _, p := range t.Players {
 		if !p.Dropped {
-			players = append(players, p)
+			players = append(players, p.PlayerID)
 		}
 	}
 	return players
@@ -545,7 +576,7 @@ func (r *Round) MakeMatches() {
 		players := r.Tournament.activePlayers()
 		shufflePlayers(players)
 		if len(players)%2 == 1 {
-			players = append(players, nil)
+			players = append(players, NoPlayer)
 		}
 
 		bestPairings = make([]Pairing, 0, len(players)/2)
@@ -587,7 +618,7 @@ func (r *Round) MakeMatches() {
 
 		var basePartialMatch partialRound
 		basePartialMatch.UnmatchedPlayers = r.Tournament.activePlayers()
-		shuffleGroups(basePartialMatch.UnmatchedPlayers)
+		shuffleGroups(r.Tournament, basePartialMatch.UnmatchedPlayers)
 
 		basePartialMatch.Tournament = r.Tournament
 		partials <- basePartialMatch
@@ -598,7 +629,7 @@ func (r *Round) MakeMatches() {
 	r.Matches = make([]Match, 0, len(r.Tournament.Players)/2)
 	for i, pairing := range bestPairings {
 		r.Matches = append(r.Matches, Match{Game: Game{Pairing: pairing}, Number: i + 1})
-		if pairing.Runner == nil {
+		if pairing.Runner == NoPlayer {
 			// bye
 			r.Matches[len(r.Matches)-1].Game.RecordResult(pairing.Corp, false)
 		}
@@ -609,9 +640,9 @@ func (r *Round) Start() {
 	if !r.started {
 		r.started = true
 		for _, m := range r.Matches {
-			m.Corp.CurrentMatch = &m
-			if m.Runner != nil {
-				m.Runner.CurrentMatch = &m
+			r.Tournament.Player(m.Corp).CurrentMatch = &m
+			if m.Runner != NoPlayer {
+				r.Tournament.Player(m.Runner).CurrentMatch = &m
 			}
 		}
 	}
@@ -627,25 +658,27 @@ func (r *Round) Finish() error {
 		}
 		for i, _ := range r.Matches {
 			m := &(r.Matches[i])
-			m.Corp.Prestige += m.GetPrestige(m.Corp)
-			m.Corp.FinishedMatches = append(m.Corp.FinishedMatches, m)
-			m.Corp.CurrentMatch = nil
-			if m.Runner != nil {
-				m.Runner.Prestige += m.GetPrestige(m.Runner)
-				m.Runner.FinishedMatches = append(m.Runner.FinishedMatches, m)
-				m.Runner.CurrentMatch = nil
+			corp := r.Tournament.Player(m.Corp)
+			runner := r.Tournament.Player(m.Runner)
+			corp.Prestige += m.GetPrestige(m.Corp)
+			corp.FinishedMatches = append(corp.FinishedMatches, m)
+			corp.CurrentMatch = nil
+			if runner != nil {
+				runner.Prestige += m.GetPrestige(m.Runner)
+				runner.FinishedMatches = append(runner.FinishedMatches, m)
+				runner.CurrentMatch = nil
 			}
 		}
 
 		r.Tournament.sosUpToDate = false
 		r.Tournament.updateSoS()
-		r.Tournament.sortPlayers()
+		r.Tournament.sortPlayers(r.Tournament.Standings)
 	}
 
 	return nil
 }
 
-func (g *Game) RecordResult(winner *Player, modifiedWin bool) {
+func (g *Game) RecordResult(winner PlayerID, modifiedWin bool) {
 	g.Concluded = true
 	g.CorpWin = (winner == g.Corp)
 	g.RunnerWin = (winner == g.Runner)
@@ -685,8 +718,8 @@ func (g Game) RunnerPrestige() int {
 }
 
 type Pairing struct {
-	Corp   *Player
-	Runner *Player
+	Corp   PlayerID
+	Runner PlayerID
 }
 
 type Match struct {
@@ -695,15 +728,15 @@ type Match struct {
 }
 
 func (m Match) IsBye() bool {
-	return (m.Corp == nil || m.Runner == nil)
+	return (m.Corp == NoPlayer || m.Runner == NoPlayer)
 }
 func (m Match) IsDone() bool {
 	return m.Game.Concluded
 }
-func (m Match) GetPrestige(p *Player) int {
+func (m Match) GetPrestige(p PlayerID) int {
 	if p != m.Corp && p != m.Runner {
 		return 0
-	} else if m.Runner == nil || m.Corp == nil {
+	} else if m.Runner == NoPlayer || m.Corp == NoPlayer {
 		//Bye
 		return 3
 	} else if m.Corp == p {
@@ -712,23 +745,23 @@ func (m Match) GetPrestige(p *Player) int {
 		return m.Game.RunnerPrestige()
 	}
 }
-func (m Match) GetOpponent(p *Player) *Player {
+func (m Match) GetOpponent(p PlayerID) PlayerID {
 	if p == m.Corp {
 		return m.Runner
 	} else if p == m.Runner {
 		return m.Corp
 	} else {
-		return nil
+		return NoPlayer
 	}
 }
 
-func (m Match) GetWinner() *Player {
+func (m Match) GetWinner() PlayerID {
 	if m.Game.RunnerWin {
 		return m.Runner
 	} else if m.Game.CorpWin {
 		return m.Corp
 	} else {
-		return nil
+		return NoPlayer
 	}
 }
 
