@@ -44,7 +44,7 @@ const playerListTemplate = `<h1>Players</h1>
 const standingsTemplate = `{{$t := .}}<h1>Standings</h1>
 {{if .Standings}}<table id="standings">
 <tr><th>Player</th><th>Pts</th><th>SoS</th><th>XSoS</th></tr>
-{{range .Standings}}{{$p := ($t.Player .)}}<tr><td>{{$p.Name}}</td><td>{{$p.Prestige}}</td><td>{{$p.SoS}}</td><td>{{$p.XSoS}}</td></tr>
+{{range .Standings}}{{$p := ($t.Player .)}}<tr><td>{{$p.Name}}</td><td>{{$p.Prestige}}</td><td>{{printf "%.3f" $p.SoS}}</td><td>{{printf "%.3f" $p.XSoS}}</td></tr>
 {{end}}
 </table>
 {{end}}

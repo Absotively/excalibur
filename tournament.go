@@ -113,7 +113,8 @@ func (s *playerSorter) Less(i, j int) bool {
 func (t *Tournament) updateSoS() {
 	if !t.SosUpToDate {
 		// Update prestige averages
-		for _, p := range t.Players {
+		for i, _ := range t.Players {
+			p := &(t.Players[i])
 			// Note that byes are counted here, because
 			// that's what TOME does
 			if len(p.FinishedMatches) == 0 {
@@ -124,7 +125,8 @@ func (t *Tournament) updateSoS() {
 		}
 
 		// Update SoS
-		for _, p := range t.Players {
+		for i, _ := range t.Players {
+			p := &(t.Players[i])
 			var SoSSum float64
 			var matchCount int
 			for _, mID := range p.FinishedMatches {
@@ -142,7 +144,8 @@ func (t *Tournament) updateSoS() {
 		}
 
 		// Update xSoS
-		for _, p := range t.Players {
+		for i, _ := range t.Players {
+			p := &(t.Players[i])
 			var xSoSSum float64
 			var matchCount int
 			for _, mID := range p.FinishedMatches {
@@ -456,13 +459,16 @@ func (t *Tournament) playerCorpEffects(p PlayerID) (sideDiff, streak int) {
 	sideDiff = 1
 	streak = 1
 	for _, mID := range t.Player(p).FinishedMatches {
-		if t.Match(mID).Corp == p {
-			sideDiff += 1
-			streak += 1
-		} else {
-			// runner
-			sideDiff -= 1
-			streak = 1
+		m := t.Match(mID)
+		if !m.IsBye() {
+			if m.Corp == p {
+				sideDiff += 1
+				streak += 1
+			} else {
+				// runner
+				sideDiff -= 1
+				streak = 1
+			}
 		}
 	}
 	if sideDiff < 0 {
@@ -475,13 +481,16 @@ func (t *Tournament) playerRunnerEffects(p PlayerID) (sideDiff, streak int) {
 	sideDiff = -1
 	streak = 1
 	for _, mID := range t.Player(p).FinishedMatches {
-		if t.Match(mID).Corp == p {
-			sideDiff += 1
-			streak = 1
-		} else {
-			// runner
-			sideDiff -= 1
-			streak += 1
+		m := t.Match(mID)
+		if !m.IsBye() {
+			if m.Corp == p {
+				sideDiff += 1
+				streak = 1
+			} else {
+				// runner
+				sideDiff -= 1
+				streak += 1
+			}
 		}
 	}
 	if sideDiff < 0 {
@@ -495,22 +504,25 @@ func (t *Tournament) playerByeEffects(p PlayerID) (sideDiff, streak int) {
 	streak = 0
 	runnerStreak := true
 	for _, mID := range t.Player(p).FinishedMatches {
-		if t.Match(mID).Corp == p {
-			sideDiff += 1
-			if runnerStreak {
-				streak = 1
-				runnerStreak = false
+		m := t.Match(mID)
+		if !m.IsBye() {
+			if m.Corp == p {
+				sideDiff += 1
+				if runnerStreak {
+					streak = 1
+					runnerStreak = false
+				} else {
+					streak += 1
+				}
 			} else {
-				streak += 1
-			}
-		} else {
-			// runner
-			sideDiff -= 1
-			if runnerStreak {
-				streak += 1
-			} else {
-				streak = 1
-				runnerStreak = true
+				// runner
+				sideDiff -= 1
+				if runnerStreak {
+					streak += 1
+				} else {
+					streak = 1
+					runnerStreak = true
+				}
 			}
 		}
 	}
