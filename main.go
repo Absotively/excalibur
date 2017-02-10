@@ -246,7 +246,7 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 
 func save(w http.ResponseWriter, r *http.Request) {
 	if filename != "" {
-		e := tournament.save(filename)
+		e := tournament.save(filename, "Manual save")
 		if e != nil {
 			fmt.Println("Error saving:", e.Error())
 		} else {
@@ -271,7 +271,7 @@ func main() {
 		}
 
 		// try to load tournament
-		e := loadTournament(&tournament, filename)
+		e := loadLatestSave(&tournament, filename)
 		if e != nil {
 			fmt.Println("Tournament loading error:", e.Error())
 			tournament = Tournament{}

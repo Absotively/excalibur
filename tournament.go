@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"sort"
 )
 
@@ -800,28 +800,100 @@ func (m Match) GetWinner() PlayerID {
 	}
 }
 
-func (t *Tournament) save(file string) error {
-	marshaled, e := json.Marshal(t)
+type saveHeader struct {
+	Number int
+	Reason string
+}
+
+func (t *Tournament) save(file, reason string) error {
+	headers, e := scanSaveFile(file)
 	if e != nil {
 		return e
 	}
-	return ioutil.WriteFile(file, marshaled, 0600)
+	number := 1
+	if len(headers) != 0 {
+		number = headers[len(headers)-1].Number + 1
+	}
+
+	f, e := os.OpenFile(file, os.O_APPEND, 0600)
+	if os.IsNotExist(e) {
+		f, e = os.Create(file)
+	}
+	if e != nil {
+		return e
+	}
+	defer f.Close()
+
+	enc := json.NewEncoder(f)
+
+	h := saveHeader{Number: number, Reason: reason}
+	e = enc.Encode(h)
+	if e != nil {
+		return e
+	}
+
+	e = enc.Encode(t)
+	return e
 }
 
-func loadTournament(t *Tournament, file string) error {
-	marshaled, err := ioutil.ReadFile(filename)
-	if err != nil {
-		return err
+func scanSaveFile(file string) ([]saveHeader, error) {
+	var h saveHeader
+	var headers []saveHeader
+	f, e := os.Open(file)
+	if e != nil {
+		return headers, e
 	}
-	err = json.Unmarshal(marshaled, t)
-	if err != nil {
-		return err
+	defer f.Close()
+	dec := json.NewDecoder(f)
+	for dec.More() {
+		e = dec.Decode(&h)
+		if e != nil {
+			return headers, e
+		}
+		if h.Reason != "" {
+			headers = append(headers, h)
+		}
 	}
-	for i, _ := range t.Players {
-		t.Players[i].Tournament = t
+	return headers, nil
+}
+
+func loadSave(t *Tournament, file string, number int) error {
+	var h saveHeader
+	f, e := os.Open(file)
+	if e != nil {
+		return e
 	}
-	for i, _ := range t.Rounds {
-		t.Rounds[i].Tournament = t
+	defer f.Close()
+	dec := json.NewDecoder(f)
+	for dec.More() {
+		e = dec.Decode(&h)
+		if e != nil {
+			return e
+		}
+		if h.Reason != "" && h.Number == number {
+			e = dec.Decode(t)
+			if e != nil {
+				return e
+			} else {
+				for i, _ := range t.Players {
+					t.Players[i].Tournament = t
+				}
+				for i, _ := range t.Rounds {
+					t.Rounds[i].Tournament = t
+				}
+				return nil
+			}
+		}
 	}
-	return nil
+
+	return errors.New("Record not found")
+}
+
+func loadLatestSave(t *Tournament, file string) error {
+	headers, e := scanSaveFile(file)
+	if e != nil || len(headers) == 0 {
+		return e
+	}
+	e = loadSave(t, file, headers[len(headers)-1].Number)
+	return e
 }
