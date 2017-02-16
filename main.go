@@ -66,14 +66,21 @@ func playerForm(w http.ResponseWriter, r *http.Request) {
 		if edit {
 			player := tournament.Player(id)
 			if player != nil {
+				oldName := player.Name
 				player.Name = name
 				player.Corp = corp
 				player.Runner = runner
+				saveWrapper(fmt.Sprintf("Edited player %s (was %s)", name, oldName))
 			} else {
 				e = errors.New("No such player")
 			}
 		} else {
 			e = tournament.AddPlayer(name, corp, runner)
+			if e != nil {
+				fmt.Println("Error adding player:", e)
+			} else {
+				saveWrapper(fmt.Sprintf("Added player %s", name))
+			}
 		}
 
 		if e == nil {
@@ -127,8 +134,10 @@ func changePlayer(w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("drop") != "" {
 		tournament.DropPlayer(id)
+		saveWrapper(fmt.Sprintf("Dropped player %s", tournament.Player(id).Name))
 	} else if r.FormValue("re-add") != "" {
 		tournament.ReAddPlayer(id)
+		saveWrapper(fmt.Sprintf("Re-added player %s", tournament.Player(id).Name))
 	}
 
 	seeOther(w, "/players")
@@ -141,6 +150,7 @@ func menu(w http.ResponseWriter, r *http.Request) {
 func startRound(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		e := tournament.NextRound()
+		saveWrapper(fmt.Sprintf("Paired round %d", len(tournament.Rounds)))
 		if e != nil {
 			applyTemplate(w, errorTemplate, e)
 		} else {
@@ -158,6 +168,7 @@ func finishRound(w http.ResponseWriter, r *http.Request) {
 			applyTemplate(w, errorTemplate, e)
 			return
 		}
+		saveWrapper("Finished round & updated standings")
 	}
 	seeOther(w, "/")
 }
@@ -215,6 +226,7 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 		}
 
 		match.Game.RecordResult(winner, timed)
+		saveWrapper(fmt.Sprintf("Recorded result for %s vs %s. Winner: %s, Went to time: %t", tournament.Player(match.Game.Corp).Name, tournament.Player(match.Game.Runner).Name, result, timed))
 
 		seeOther(w, "/matches")
 	} else {
@@ -244,16 +256,15 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func save(w http.ResponseWriter, r *http.Request) {
-	if filename != "" {
-		e := tournament.save(filename, "Manual save")
-		if e != nil {
-			fmt.Println("Error saving:", e.Error())
-		} else {
-			fmt.Println("Tournament saved")
-		}
+func saveWrapper(reason string) error {
+	var e error
+	e = tournament.save(filename, reason)
+	if e != nil {
+		fmt.Println("Error saving:", e.Error())
+	} else {
+		fmt.Println("Tournament saved:", reason)
 	}
-	seeOther(w, "/")
+	return e
 }
 
 func seeOther(w http.ResponseWriter, l string) {
@@ -292,6 +303,5 @@ func main() {
 	http.HandleFunc("/recordResult", recordResult)
 	http.HandleFunc("/finishRound", finishRound)
 	http.HandleFunc("/nextRound", startRound)
-	http.HandleFunc("/save", save)
 	http.ListenAndServe("localhost:8080", nil)
 }
