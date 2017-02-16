@@ -265,17 +265,19 @@ func main() {
 	if len(os.Args) > 1 {
 		filename = os.Args[1]
 	}
-	if filename != "" {
-		if !strings.HasSuffix(filename, ".excalibur") {
-			filename = filename + ".excalibur"
-		}
+	if filename == "" {
+		fmt.Println("Please specify a save file")
+		return
+	}
+	if !strings.HasSuffix(filename, ".excalibur") {
+		filename = filename + ".excalibur"
+	}
 
-		// try to load tournament
-		e := loadLatestSave(&tournament, filename)
-		if e != nil {
-			fmt.Println("Tournament loading error:", e.Error())
-			tournament = Tournament{}
-		}
+	// try to load tournament or create save file
+	e := loadOrCreate(&tournament, filename)
+	if e != nil {
+		fmt.Println(e)
+		return
 	}
 
 	rand.Seed(time.Now().UnixNano())

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math/rand"
 	"os"
 	"sort"
@@ -808,6 +809,7 @@ type saveHeader struct {
 func (t *Tournament) save(file, reason string) error {
 	headers, e := scanSaveFile(file)
 	if e != nil {
+		fmt.Println("scanSaveFile failed")
 		return e
 	}
 	number := 1
@@ -815,11 +817,13 @@ func (t *Tournament) save(file, reason string) error {
 		number = headers[len(headers)-1].Number + 1
 	}
 
-	f, e := os.OpenFile(file, os.O_APPEND, 0600)
+	f, e := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, 0600)
 	if os.IsNotExist(e) {
+		fmt.Println("file didn't exist")
 		f, e = os.Create(file)
 	}
 	if e != nil {
+		fmt.Println("open or create failed")
 		return e
 	}
 	defer f.Close()
@@ -829,6 +833,7 @@ func (t *Tournament) save(file, reason string) error {
 	h := saveHeader{Number: number, Reason: reason}
 	e = enc.Encode(h)
 	if e != nil {
+		fmt.Println("Encode failed for header")
 		return e
 	}
 
@@ -896,4 +901,24 @@ func loadLatestSave(t *Tournament, file string) error {
 	}
 	e = loadSave(t, file, headers[len(headers)-1].Number)
 	return e
+}
+
+func loadOrCreate(t *Tournament, file string) error {
+	f, e := os.OpenFile(file, os.O_RDWR, 0600) // Open read/write to make sure we have write permission
+	if os.IsNotExist(e) {
+		fmt.Printf("Save file %s didn't exist, creating\n", file)
+		f, e = os.Create(file)
+		if e != nil {
+			fmt.Println("File creation failed:", e)
+			return errors.New("Couldn't create save file")
+		}
+		f.Close()
+		return nil
+	}
+	if e != nil {
+		fmt.Println("Failed to open save file:", e)
+		return errors.New("Couldn't open save file")
+	}
+	f.Close() // loadLatestSave will re-open f
+	return loadLatestSave(t, file)
 }
