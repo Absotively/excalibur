@@ -851,6 +851,7 @@ func scanSaveFile(file string) ([]saveHeader, error) {
 	defer f.Close()
 	dec := json.NewDecoder(f)
 	for dec.More() {
+		h.Reason = ""
 		e = dec.Decode(&h)
 		if e != nil {
 			return headers, e

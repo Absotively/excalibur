@@ -28,6 +28,7 @@ const menuTemplate = `<h1>Tournament menu</h1>
 <li><a href="/rounds">All rounds</a></li>
 <li><form action="/finishRound" method="POST"><input type="submit" value="Finish round"></form></li>
 <li><form action="/nextRound" method="POST"><input type="submit" value="Start next round"></form></li>
+<li><a href="/saves">History/undo</a></li>
 </ul>
 `
 
@@ -38,6 +39,26 @@ const playerListTemplate = `<h1>Players</h1>
 {{end}}
 <p><a href="/players/add">Add player</a></p>
 <p><a href="/">Menu</a></p>
+`
+
+const savesTemplate = `<h1>Saved tournament states</h1>
+{{if .}}<p>Note that newer states are at the bottom</p>
+<table>
+<tr><th>Last action</th><th></th></tr>
+{{range .}}<tr>
+<td>{{.Reason}}</td>
+<td>
+<form action="/load" method="POST">
+<input type="hidden" name="save-number" value="{{.Number}}">
+<input type="hidden" name="save-reason" value="{{.Reason}}">
+<input type="submit" value="Load">
+</form>
+</td>
+</tr>{{end}}
+</table>
+{{else}}
+<p>No saves.</p>
+{{end}}
 `
 
 const standingsTemplate = `{{$t := .}}<h1>Standings</h1>

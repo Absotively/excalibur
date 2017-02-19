@@ -70,7 +70,11 @@ func playerForm(w http.ResponseWriter, r *http.Request) {
 				player.Name = name
 				player.Corp = corp
 				player.Runner = runner
-				saveWrapper(fmt.Sprintf("Edited player %s (was %s)", name, oldName))
+				if name == oldName {
+					saveWrapper(fmt.Sprintf("Edited player %s", name))
+				} else {
+					saveWrapper(fmt.Sprintf("Edited player %s (was %s)", name, oldName))
+				}
 			} else {
 				e = errors.New("No such player")
 			}
@@ -256,6 +260,38 @@ func recordResult(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func saves(w http.ResponseWriter, r *http.Request) {
+	data, e := scanSaveFile(filename)
+	if e != nil {
+		fmt.Println(e)
+		seeOther(w, "/")
+	} else {
+		applyTemplate(w, savesTemplate, data)
+	}
+}
+
+func loadOldSave(w http.ResponseWriter, r *http.Request) {
+	defer seeOther(w, "/")
+	if r.Method == "POST" {
+		numberString := r.FormValue("save-number")
+		var number int
+		if numberString != "" {
+			var e error
+			number, e = strconv.Atoi(numberString)
+			if e != nil {
+				return
+			}
+		}
+		reason := r.FormValue("save-reason")
+
+		err := loadSave(&tournament, filename, number)
+		if err != nil {
+			return
+		}
+		saveWrapper(fmt.Sprintf("Loaded old save (%s)", reason))
+	}
+}
+
 func saveWrapper(reason string) error {
 	var e error
 	e = tournament.save(filename, reason)
@@ -303,5 +339,7 @@ func main() {
 	http.HandleFunc("/recordResult", recordResult)
 	http.HandleFunc("/finishRound", finishRound)
 	http.HandleFunc("/nextRound", startRound)
+	http.HandleFunc("/saves", saves)
+	http.HandleFunc("/load", loadOldSave)
 	http.ListenAndServe("localhost:8080", nil)
 }
