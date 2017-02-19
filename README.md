@@ -1,8 +1,14 @@
-Excalibur is a program for running Netrunner tournaments with single-game rounds. It is in an alpha, proof-of-concept-y sort of state at the moment. You should not actually run any tournaments with it at this time.
+Excalibur is a program for running Netrunner tournaments with single-game rounds. It is not very polished, but it should be adequate for running small test tournaments to experiment with the single-game-round tournament format.
 
 You can read a rambling explanation of how the pairings rules work in [pairings.md](pairings.md).
 
 Instructions
 ============
 
-Start excalibur. Go to http://localhost:8080/ in your browser.
+1. On the command line, run Excalibur with the name of a save file, like so:
+
+        excalibur test_tournament
+
+    If the specified file exists, the newest save in it is loaded; if it doesn't exist, it is created. If it exists but is not an Excalibur save file, probably bad things happen. I haven't tried it.
+
+2. Go to http://localhost:8080/ in your browser.
