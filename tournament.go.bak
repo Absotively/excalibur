@@ -276,17 +276,6 @@ type roundGoodness struct {
 	byePrestige int   // how many prestige points the player with the bye has
 }
 
-func (src *roundGoodness) copy() roundGoodness {
-	var dst roundGoodness
-	dst.rematches = append(dst.rematches, src.rematches...)
-	dst.groupDiffs = append(dst.groupDiffs, src.groupDiffs...)
-	dst.sideDiffs = append(dst.sideDiffs, src.sideDiffs...)
-	dst.streaks = append(dst.streaks, src.streaks...)
-	dst.hasBye = src.hasBye
-	dst.byePrestige = src.byePrestige
-	return dst
-}
-
 func (g1 *roundGoodness) BetterThan(g2 *roundGoodness) bool {
 	// rematches bad
 	if len(g1.rematches) < len(g2.rematches) {
@@ -551,7 +540,7 @@ func (p *partialRound) appendMatch(corp, runner PlayerID) partialRound {
 
 	newPartial.Tournament = p.Tournament
 
-	newPartial.goodness = p.goodness.copy()
+	newPartial.goodness = p.goodness
 	newPartial.goodness.addPairing(newPartial.Tournament.pairingEffects(corp, runner))
 
 	if len(p.UnmatchedPlayers) > 2 {
