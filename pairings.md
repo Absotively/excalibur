@@ -1,7 +1,7 @@
 How pairings work in Excalibur
 ==============================
 
-I've tried to follow [FIDE's basic Swiss pairings rules for chess](https://www.fide.com/fide/handbook.html?id=83&view=article) in most things. I've tried to follow the Netrunner tournament rules wherever they don't conflict with the FIDE rules.
+I've tried to follow [FIDE's basic Swiss pairings rules for chess](https://handbook.fide.com/chapter/C0401) in most things. I've tried to follow the Netrunner tournament rules wherever they don't conflict with the FIDE rules.
 
 The pairings engine essentially looks at every possible pairing and picks the best one. If there are multiple equally good pairings, it picks one at random, though it's possible that not all best pairings are equally likely to be chosen (randomness is hard).
 
@@ -52,3 +52,6 @@ Notes
 -----
 
 The FIDE rules permit side differences and streaks of three in the last round only. Excalibur doesn't currently have special handling for the last round, but it might be a good idea to add at some point, in order to prioritize matching by score group in the final round.
+
+I also haven't implemented this part of the FIDE rules:
+> A player who has already received a pairing-allocated bye, or has already scored a (forfeit) win due to an opponent not appearing in time, shall not receive the pairing-allocated bye.
